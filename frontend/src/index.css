@@ -1,0 +1,227 @@
+/* ========================
+   Reset
+======================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f0f2f5;
+  color: #222;
+  line-height: 1.6;
+}
+
+/* ========================
+   Links
+======================== */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  color: #0066ff;
+}
+
+/* ========================
+   Container
+======================== */
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* ========================
+   Navbar
+======================== */
+.navbar {
+  background: #111;
+  padding: 15px 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.nav-container {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  color: #fff;
+  font-weight: bold;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.nav-links a {
+  color: #ddd;
+  margin-left: 20px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+/* ========================
+   Post Cards
+======================== */
+.post-card {
+  background: #fff;
+  padding: 20px;
+  margin-bottom: 25px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* Inner flex for image + content */
+.post-card-inner {
+  display: flex;
+  gap: 15px;
+  align-items: center; /* vertical center image with title/meta */
+}
+
+/* Post Image (all posts same size) */
+.post-image {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%; /* circular */
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #ddd;
+}
+
+/* Post content */
+.post-content {
+  flex: 1;
+}
+
+/* Title */
+.post-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+/* Featured card title bigger */
+.featured-card .post-title {
+  font-size: 24px;
+}
+
+/* Post Meta + Category inline */
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.category-tag {
+  background: #e0f0ff;
+  color: #0066ff;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* Excerpt */
+.post-excerpt {
+  color: #555;
+  font-size: 14px;
+}
+
+.featured-card .post-excerpt {
+  font-size: 16px;
+}
+
+/* ========================
+   Featured Post Card
+======================== */
+.featured-card {
+  padding: 25px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 30px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.featured-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+/* ========================
+   Post Detail Page
+======================== */
+.post-detail-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.post-detail-meta {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.post-detail-content {
+  font-size: 17px;
+  line-height: 1.8;
+  color: #333;
+}
+
+/* ========================
+   Buttons
+======================== */
+.btn {
+  background: #0066ff;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: none;
+}
+
+.btn:hover {
+  background: #0051cc;
+}
+
+/* ========================
+   Responsive
+======================== */
+@media (max-width: 600px) {
+  .post-card-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .post-image {
+    width: 50px;
+    height: 50px;
+  }
+
+  .post-title {
+    font-size: 18px;
+  }
+
+  .featured-card .post-title {
+    font-size: 20px;
+  }
+}
