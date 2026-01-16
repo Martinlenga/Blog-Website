@@ -8,14 +8,14 @@ const useFacebookSDK = () => {
       return;
     }
 
-    // fb-root div
+    // Add fb-root div if not present
     if (!document.getElementById("fb-root")) {
       const fbRoot = document.createElement("div");
       fbRoot.id = "fb-root";
       document.body.appendChild(fbRoot);
     }
 
-    // SDK script
+    // Load SDK script
     const script = document.createElement("script");
     script.async = true;
     script.defer = true;
@@ -30,6 +30,10 @@ const useFacebookSDK = () => {
     };
 
     document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
   }, []);
 };
 

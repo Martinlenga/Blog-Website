@@ -7,10 +7,10 @@ const Navbar = () => {
         <div className="logo">YourBlog</div>
 
         <div className="nav-links">
-          <NavLink to="/" end>Home</NavLink>
-          <NavLink to="/blog">Blog</NavLink>
-          <NavLink to="/reviews">Reviews</NavLink>
-          <NavLink to="/contact">Contact</NavLink>
+          <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>Home</NavLink>
+          <NavLink to="/blog" className={({ isActive }) => isActive ? "active" : ""}>Blog</NavLink>
+          <NavLink to="/reviews" className={({ isActive }) => isActive ? "active" : ""}>Reviews</NavLink>
+          <NavLink to="/contact" className={({ isActive }) => isActive ? "active" : ""}>Contact</NavLink>
         </div>
       </div>
     </nav>

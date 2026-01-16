@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from corsheaders.defaults import default_headers
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +28,7 @@ SECRET_KEY = 'django-insecure-s+fbva3oqj6s#utp19_d5$5hfq_fo(ztq$^tu*$8colohz5jfz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     'blog',
     'rest_framework',
     'corsheaders',
+    'django_daraja',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +58,12 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-user-phone',
+]
+
 
 ROOT_URLCONF = 'blogsite.urls'
 
@@ -125,3 +134,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Safaricom Daraja API
+MPESA_CONSUMER_KEY = "oM6Zfw7JW4JskSmoW1qFzgt9AMw2sjET1gYh5wUmC6ADkjkj"
+MPESA_CONSUMER_SECRET = "zTToO83Wm7ImwsO0UQ971l2ydj1cE5Z5PCLPDlulFPvsySUJCFwkPWWNjU0q5vjJ"
+MPESA_SHORTCODE = "174379"  # usually 174379 for sandbox
+MPESA_PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"               # sandbox passkey
+MPESA_ENV = "sandbox"                        # change to "live" in production
+MPESA_CALLBACK_URL = "https://echoingly-uningrafted-deborah.ngrok-free.dev/api/payments/mpesa/callback/"  # your webhook
+

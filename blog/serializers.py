@@ -1,12 +1,33 @@
-# blog/serializers.py
+# serializers.py
 from rest_framework import serializers
 from .models import Post
 
-# serializers.py
-class PostSerializer(serializers.ModelSerializer):
-    banner_image = serializers.ImageField(use_url=True)  # ensures full URL
-    author = serializers.CharField(source='author.username')
+
+class PublicPostSerializer(serializers.ModelSerializer):
+    author_name = serializers.CharField(source="author.username")
+    published_at = serializers.DateTimeField(source="created_at", format="%b %d, %Y")
+    price = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = ['id', 'slug','title', 'content', 'author', 'created_at', 'category', 'banner_image', 'featured']
+        fields = [
+            "id",
+            "slug",
+            "title",
+            "excerpt",
+            "content",
+            "author_name",
+            "published_at",
+            "category",
+            "banner_image",
+            "featured",
+            "price",
+        ]
+
+    def get_price(self, obj):
+        return f"{obj.price:.2f}"
+
+
+class FullPostSerializer(PublicPostSerializer):
+    class Meta(PublicPostSerializer.Meta):
+        fields = PublicPostSerializer.Meta.fields + ["content"]

@@ -12,6 +12,8 @@ const Footer = () => {
           <a href="/blog">Blog</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">Facebook</a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter</a>
         </div>
       </div>
 
