@@ -1,0 +1,201 @@
+/* ===================== POST DETAIL ===================== */
+
+/* Container */
+.post-wrapper {
+  max-width: 720px;
+  margin: 120px auto 80px;
+  padding: 0 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Header */
+.post-header {
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.post-title {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 12px;
+  color: #111;
+}
+
+/* Meta info */
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #0e0e0e;
+}
+
+.post-meta span {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #f3f4f6; /* subtle light gray */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  display: inline-block;
+}
+
+.meta-price {
+  font-weight: 600;
+  color: #e53935; /* bold red for price */
+}
+
+/* Content */
+.post-content {
+  position: relative;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  color: #222;
+}
+
+/* Locked state */
+.post-content.locked {
+  max-height: none;           
+  overflow: hidden;
+}
+
+/* Blurred content when locked */
+.post-content.locked .content-body {
+  max-height: 65vh;          
+  min-height: 320px;         
+  overflow: hidden;
+  filter: blur(3px);
+  opacity: 0.88;
+}
+
+.post-content.locked::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 140px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0.85),
+    rgba(255,255,255,1)
+  );
+  pointer-events: none;
+}
+
+
+/* Paywall overlay */
+.paywall-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 60px;               /* ✅ always visible */
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+  background: none;           /* remove full white wash */
+}
+
+
+/* Paywall card */
+.paywall-card {
+  background: linear-gradient(135deg,#fefefe,#f3f4f6);
+  padding: 20px 30px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.2s ease;
+  transform: translateY(-60px);
+}
+
+.paywall-card:hover {
+  transform: translateY(-45px);
+}
+
+/* Icon */
+.unlock-icon {
+  font-size: 1.35rem;
+  margin-bottom: 4px;
+}
+
+/* Text */
+.pay-text {
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 700;
+}
+
+.pay-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e53935;
+}
+
+/* Unlock button */
+.unlock-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #111;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.unlock-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+.unlock-btn:active {
+  transform: scale(0.97);
+  transition: transform 0.1s;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .post-wrapper {
+    margin: 80px 15px 60px;
+  }
+  .post-title {
+    font-size: 2rem;
+  }
+}
+/* ================= Google login link ================= */
+.google-login-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #1a73e8;
+  transition: all 0.2s ease;
+}
+
+.google-login-link:hover {
+  background: #f0f4ff;
+  border-color: #1a73e8;
+  transform: translateY(-1px);
+}
+
+.google-login-link:active {
+  transform: scale(0.97);
+}
+
+/* Google "G" icon */
+.google-login-link .google-icon {
+  font-size: 1.1rem;
+}

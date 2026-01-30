@@ -1,30 +1,32 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer"; // <--- IMPORT FOOTER
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
-import Home from "./pages/Home";
-import Blog from "./pages/Blog";
-import PostDetail from "./pages/PostDetail";
-import Reviews from "./pages/Reviews";
-import Contact from "./pages/Contact";
+// Public Routes
+import PublicRoutes from "./publicSite/PublicRoutes";
+import { PublicAuthProvider } from "./auth/PublicAuthContext";// <-- important
+
+// Admin
+import AdminRoutes from "./admin/routes/AdminRoutes";
+import AdminLogin from "./auth/AdminLogin";
 
 function App() {
   return (
-    <div className="app-wrapper">
-      <Router>
-        <Navbar />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/post/:slug" element={<PostDetail />} />
-            <Route path="/reviews" element={<Reviews />} />
-            <Route path="/contact" element={<Contact />} />
-          </Routes>
-        </main>
-        <Footer />
-      </Router>
-    </div>
+    <Router>
+      <PublicAuthProvider>  {/* <-- wrap public routes */}
+        <Routes>
+          {/* PUBLIC ROUTES */}
+          <Route path="/*" element={<PublicRoutes />} />
+
+          {/* ADMIN LOGIN */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+
+          {/* ADMIN PROTECTED ROUTES */}
+          <Route path="/admin/*" element={<AdminRoutes />} />
+
+          {/* REDIRECT unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </PublicAuthProvider>
+    </Router>
   );
 }
 

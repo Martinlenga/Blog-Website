@@ -4,7 +4,9 @@ from .views import (
     post_detail_by_slug,
     initiate_payment,
     mpesa_callback,
+    FeedbackViewSet,
 )
+from rest_framework.routers import DefaultRouter
 
 urlpatterns = [
     path("posts/", post_list),
@@ -12,3 +14,7 @@ urlpatterns = [
     path("posts/<slug:slug>/pay/", initiate_payment),
     path("payments/mpesa/callback/", mpesa_callback),
 ]
+
+router = DefaultRouter()
+router.register(r"feedbacks", FeedbackViewSet, basename="feedback")
+urlpatterns += router.urls
