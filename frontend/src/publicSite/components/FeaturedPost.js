@@ -44,7 +44,7 @@ const FeaturedPost = ({ post }) => {
         </h2>
 
         <p className="mt-4 text-lg text-gray-700 leading-relaxed line-clamp-3">
-          {post.excerpt}
+          {post.meta_description}
         </p>
 
         <div className="mt-6 flex items-center gap-4">

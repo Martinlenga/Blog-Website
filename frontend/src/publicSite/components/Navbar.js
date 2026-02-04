@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import { useAuth } from "../../auth/PublicAuthContext";
@@ -7,6 +7,7 @@ import GoogleLoginButton from "../../auth/GoogleLoginButton";
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isLoggedIn, user, logout } = useAuth();
+  const [displayName, setDisplayName] = useState("Reader");
 
   const links = [
     { name: "Home", to: "/" },
@@ -15,18 +16,23 @@ const Navbar = () => {
     { name: "Contact", to: "/contact" },
   ];
 
+  // ✅ Update displayName whenever user changes
+  useEffect(() => {
+    setDisplayName(user?.name || "Reader");
+  }, [user]);
+
   return (
-    <nav className="fixed top-0 z-50 w-full bg-white/90 backdrop-blur border-b border-gray-200">
+    <nav className="fixed top-0 z-50 w-full bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        
+
         {/* Brand */}
-        <div className="text-xl font-extrabold tracking-tight text-indigo-600">
+        <div className="text-2xl font-extrabold tracking-tight text-indigo-600 hover:text-indigo-500 transition">
           YourBlog
         </div>
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
-          {links.map(link => (
+          {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -34,7 +40,7 @@ const Navbar = () => {
               className={({ isActive }) =>
                 `pb-1 transition ${
                   isActive
-                    ? "border-b-2 border-indigo-600 text-indigo-600"
+                    ? "border-b-2 border-indigo-600 text-indigo-600 font-semibold"
                     : "hover:text-indigo-600"
                 }`
               }
@@ -44,14 +50,14 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* Right side (Auth) */}
+        {/* Auth / Right Side */}
         <div className="hidden md:flex items-center gap-4">
           {!isLoggedIn ? (
             <GoogleLoginButton />
           ) : (
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-600">
-                Hi, <strong>{user?.name || "Reader"}</strong>
+                Hi, <strong className="text-indigo-600">{displayName}</strong>
               </span>
               <button
                 onClick={logout}
@@ -74,9 +80,9 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
+        <div className="md:hidden bg-white border-t border-gray-200 shadow-sm">
           <div className="flex flex-col px-6 py-4 space-y-4">
-            {links.map(link => (
+            {links.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -85,7 +91,7 @@ const Navbar = () => {
                 className={({ isActive }) =>
                   isActive
                     ? "text-indigo-600 font-semibold"
-                    : "text-gray-800"
+                    : "text-gray-800 hover:text-indigo-600"
                 }
               >
                 {link.name}
@@ -97,12 +103,17 @@ const Navbar = () => {
               {!isLoggedIn ? (
                 <GoogleLoginButton />
               ) : (
-                <button
-                  onClick={logout}
-                  className="w-full text-sm py-2 rounded-md border border-gray-300"
-                >
-                  Logout
-                </button>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-gray-600">
+                    Hi, <strong className="text-indigo-600">{displayName}</strong>
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="text-sm py-2 px-3 rounded-md border border-gray-300 hover:bg-gray-100 w-auto"
+                  >
+                    Logout
+                  </button>
+                </div>
               )}
             </div>
           </div>

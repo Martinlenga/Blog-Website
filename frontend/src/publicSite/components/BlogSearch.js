@@ -3,7 +3,7 @@ const BlogSearch = ({ value, onChange }) => {
     <div className="flex justify-center mb-20">
       <input
         type="text"
-        placeholder="Search articles, topics, categories..."
+        placeholder="Search articles, categories..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="

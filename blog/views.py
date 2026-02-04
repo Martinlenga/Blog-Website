@@ -2,20 +2,33 @@ import json
 import uuid
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import viewsets, status
-from .models import Post, PaymentTransaction, PostAccess, Feedback, GoogleUser
-from .serializers import PublicPostSerializer, FullPostSerializer, FeedbackSerializer
-from .utils import initiate_stk_push, normalize_phone
-
 from django.conf import settings
+from django.contrib.auth.models import User
+
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import viewsets, status
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
+from .models import Post, PaymentTransaction, PostAccess, Feedback
+from .serializers import PostDetailSerializer, FeedbackSerializer
+from .utils import initiate_stk_push, normalize_phone
+
+# --------------------------
+# Google login
+# --------------------------
 @api_view(["POST"])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def google_login(request):
     token = request.data.get("token")
+    if not token:
+        return Response({"error": "No token provided"}, status=400)
 
     try:
         info = id_token.verify_oauth2_token(
@@ -23,76 +36,139 @@ def google_login(request):
             requests.Request(),
             settings.GOOGLE_CLIENT_ID
         )
-    except Exception:
+    except ValueError:
         return Response({"error": "Invalid Google token"}, status=400)
 
-    user, _ = GoogleUser.objects.get_or_create(
-        google_id=info["sub"],
+    email = info.get("email")
+    name = info.get("name", "")
+
+    if not email:
+        return Response({"error": "No email from Google"}, status=400)
+
+    user, created = User.objects.get_or_create(
+        username=email,
         defaults={
-            "email": info.get("email"),
-            "name": info.get("name"),
-        },
+            "email": email,
+            "first_name": name.split(" ")[0],
+            "last_name": " ".join(name.split(" ")[1:]),
+        }
     )
 
+    refresh = RefreshToken.for_user(user)
+
     return Response({
-        "google_id": user.google_id,
-        "email": user.email,
-        "name": user.name,
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": name,
+        },
+        "created": created,
     })
 
 
-
+# --------------------------
+# Post list (public)
+# --------------------------
 @api_view(["GET"])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def post_list(request):
     featured = Post.objects.filter(featured=True).first()
     posts = Post.objects.filter(featured=False).order_by("-created_at")
+
     return Response({
-        "featured": PublicPostSerializer(featured).data if featured else None,
-        "posts": PublicPostSerializer(posts, many=True).data,
+        "featured": PostDetailSerializer(featured).data if featured else None,
+        "posts": PostDetailSerializer(posts, many=True).data,
     })
 
 
+# --------------------------
+# Post detail (requires login)
+# --------------------------
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def post_detail_by_slug(request, slug):
     post = get_object_or_404(Post, slug=slug)
+    print("📌 Request user:", request.user, "Authenticated:", request.user.is_authenticated)
 
-    google_id = request.headers.get("X-GOOGLE-ID")
-    has_access = False
+    serializer = PostDetailSerializer(post)
+    data = serializer.data
 
-    if google_id:
-        has_access = PostAccess.objects.filter(
-            post=post,
-            user__google_id=google_id
-        ).exists()
+    # Check persistent unlock
+    has_access = PostAccess.objects.filter(post=post, user=request.user).exists()
+    locked = not has_access
 
-    serializer = FullPostSerializer if has_access else PublicPostSerializer
-    data = serializer(post).data
-    data["locked"] = not has_access
+    # Pending payment
+    pending_payment = PaymentTransaction.objects.filter(
+        post=post, user=request.user, status="PENDING"
+    ).exists()
+
+    data["locked"] = locked
+    data["pending_payment"] = pending_payment
+
+    # Include full content if unlocked
+    if not locked:
+        data["content"] = post.content
 
     return Response(data)
 
 
-
+# --------------------------
+# Unlock post
+# --------------------------
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def unlock_post(request, slug):
+    post = get_object_or_404(Post, slug=slug)
+    print("🔓 Unlock request by user:", request.user)
+
+    PostAccess.objects.get_or_create(user=request.user, post=post)
+
+    serializer = PostDetailSerializer(post)
+    data = serializer.data
+    data["locked"] = False
+    data["content"] = post.content
+
+    return Response(data)
+
+
+# --------------------------
+# Initiate payment
+# --------------------------
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
 def initiate_payment(request, slug):
     post = get_object_or_404(Post, slug=slug)
+    user = request.user
 
-    google_id = request.data.get("google_id")
     phone = normalize_phone(request.data.get("phone"))
+    if not phone:
+        return Response({"error": "Invalid phone"}, status=400)
 
-    if not google_id:
-        return Response({"error": "Google login required"}, status=401)
-
-    user = get_object_or_404(GoogleUser, google_id=google_id)
-
+    # Skip if already unlocked
     if PostAccess.objects.filter(post=post, user=user).exists():
         return Response({"paid": True})
 
+    # Check pending payment
+    existing_tx = PaymentTransaction.objects.filter(post=post, user=user, status="PENDING").first()
+    if existing_tx:
+        return Response({
+            "message": "Payment already in progress",
+            "tx_id": existing_tx.id,
+        })
+
+    # Create transaction and initiate STK push
     tx = PaymentTransaction.objects.create(
         post=post,
         user=user,
         phone=phone,
         amount=post.price,
+        status="PENDING"
     )
 
     res = initiate_stk_push(
@@ -105,17 +181,29 @@ def initiate_payment(request, slug):
     tx.checkout_request_id = res.get("CheckoutRequestID")
     tx.save()
 
-    return Response({"message": "STK push sent"})
+    return Response({
+        "message": "STK push sent",
+        "tx_id": tx.id,
+        "paid": False
+    })
 
 
-
+# --------------------------
+# Mpesa callback
+# --------------------------
 @api_view(["POST"])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def mpesa_callback(request):
     payload = json.loads(request.body.decode("utf-8"))
     stk = payload.get("Body", {}).get("stkCallback", {})
 
+    checkout_id = stk.get("CheckoutRequestID")
+    if not checkout_id:
+        return JsonResponse({"status": "invalid_callback"})
+
     tx = PaymentTransaction.objects.filter(
-        checkout_request_id=stk.get("CheckoutRequestID")
+        checkout_request_id=checkout_id
     ).select_related("post", "user").first()
 
     if not tx:
@@ -131,22 +219,26 @@ def mpesa_callback(request):
 
     metadata = stk.get("CallbackMetadata", {}).get("Item", [])
     tx.mpesa_receipt = next(
-        (i["Value"] for i in metadata if i["Name"] == "MpesaReceiptNumber"),
+        (i.get("Value") for i in metadata if i.get("Name") == "MpesaReceiptNumber"),
         None
     )
 
     tx.status = "SUCCESS"
     tx.save()
 
-    PostAccess.objects.get_or_create(
-        post=tx.post,
-        user=tx.user
-    )
+    # Grant persistent access
+    PostAccess.objects.get_or_create(post=tx.post, user=tx.user)
 
     return JsonResponse({"status": "success"})
 
+
+# --------------------------
+# Feedback
+# --------------------------
 class FeedbackViewSet(viewsets.ModelViewSet):
     serializer_class = FeedbackSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
     http_method_names = ["get", "post"]
 
     def get_queryset(self):

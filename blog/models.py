@@ -46,30 +46,18 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
-    
-
-
-class GoogleUser(models.Model):
-    google_id = models.CharField(max_length=255, unique=True)
-    email = models.EmailField(blank=True, null=True)
-    name = models.CharField(max_length=255, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.email or self.google_id
 
 
 class PostAccess(models.Model):
-    post = models.ForeignKey("Post", on_delete=models.CASCADE)
-    user = models.ForeignKey(GoogleUser, on_delete=models.CASCADE, null=True, blank=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     granted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ("post", "user")
 
-
     def __str__(self):
-        return f"{self.phone} → {self.post.title}"
+        return f"{self.user} → {self.post.title}"
 
 
 class PaymentTransaction(models.Model):
@@ -79,8 +67,8 @@ class PaymentTransaction(models.Model):
         ("FAILED", "Failed"),
     )
 
-    post = models.ForeignKey("Post", on_delete=models.CASCADE)
-    user = models.ForeignKey(GoogleUser, on_delete=models.CASCADE, null=True, blank=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     phone = models.CharField(max_length=15)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -95,7 +83,6 @@ class PaymentTransaction(models.Model):
         max_length=10, choices=STATUS_CHOICES, default="PENDING"
     )
     created_at = models.DateTimeField(auto_now_add=True)
-
 
     def __str__(self):
         return f"{self.phone} | {self.post.title} | {self.status}"

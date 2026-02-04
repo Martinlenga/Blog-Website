@@ -1,49 +1,40 @@
+// Footer.js
 import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-50 text-gray-800 mt-6">
-      <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Brand */}
-        <div className="space-y-3">
-          <h3 className="text-2xl font-bold text-indigo-600 tracking-wide">YourBlog</h3>
-          <p className="text-gray-500 text-sm">Thoughtful writing for modern living.</p>
-        </div>
+    <footer className="bg-gray-50 text-gray-700 mt-6">
+  <div className="max-w-6xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="flex flex-col items-start space-y-1">
+      <h3 className="text-xl font-bold text-indigo-600">YourBlog</h3> {/* increased from text-lg */}
+      <p className="text-gray-500 text-sm md:text-base">Thoughtful writing for modern living.</p> {/* added md:text-base */}
+    </div>
 
-        {/* Quick Links */}
-        <div className="space-y-3">
-          <h4 className="text-gray-900 text-sm font-semibold uppercase tracking-widest">Quick Links</h4>
-          <div className="flex flex-col space-y-2">
-            <a href="/" className="hover:text-indigo-600 transition">Home</a>
-            <a href="/about" className="hover:text-indigo-600 transition">About</a>
-            <a href="/blog" className="hover:text-indigo-600 transition">Blog</a>
-            <a href="/reviews" className="hover:text-indigo-600 transition">Reviews</a>
-            <a href="/faq" className="hover:text-indigo-600 transition">FAQ</a>
-            <a href="/contact" className="hover:text-indigo-600 transition">Contact</a>
-          </div>
-        </div>
-
-        {/* Social Links */}
-        <div className="space-y-3">
-          <h4 className="text-gray-900 text-sm font-semibold uppercase tracking-widest">Follow Us</h4>
-          <div className="flex items-center gap-4 text-xl text-gray-700">
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 transition">
-              <FaFacebookF />
-            </a>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 transition">
-              <FaTwitter />
-            </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 transition">
-              <FaInstagram />
-            </a>
-          </div>
-        </div>
+    <div className="flex flex-col space-y-1">
+      <h4 className="text-gray-900 text-sm md:text-base font-semibold uppercase mb-1">Quick Links</h4> {/* increased */}
+      <div className="flex flex-wrap gap-2 text-sm md:text-base"> {/* increased */}
+        <a href="/" className="hover:text-indigo-600 transition">Home</a>
+        <a href="/about" className="hover:text-indigo-600 transition">About</a>
+        <a href="/blog" className="hover:text-indigo-600 transition">Blog</a>
+        <a href="/contact" className="hover:text-indigo-600 transition">Contact</a>
       </div>
+    </div>
 
-      <div className="border-t border-gray-200 mt-8 py-4 text-center text-gray-500 text-xs">
-        © {new Date().getFullYear()} YourBlog. All rights reserved.
+    <div className="flex flex-col items-start space-y-1">
+      <h4 className="text-gray-900 text-sm md:text-base font-semibold uppercase mb-1">Follow Us</h4> {/* increased */}
+      <div className="flex gap-3 text-gray-600 text-lg md:text-xl"> {/* increased */}
+        <a href="#" className="hover:text-indigo-600"><FaFacebookF /></a>
+        <a href="#" className="hover:text-indigo-600"><FaTwitter /></a>
+        <a href="#" className="hover:text-indigo-600"><FaInstagram /></a>
       </div>
-    </footer>
+    </div>
+  </div>
+
+  <div className="border-t border-gray-200 mt-4 py-3 text-center text-gray-500 text-sm md:text-base">
+    © {new Date().getFullYear()} YourBlog. All rights reserved.
+  </div>
+</footer>
+
   );
 };
 

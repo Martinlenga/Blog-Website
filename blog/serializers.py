@@ -1,15 +1,16 @@
 from rest_framework import serializers
 from .models import Post, Feedback
 
-
-class PublicPostSerializer(serializers.ModelSerializer):
+# --------------------------
+# Post detail serializer (single, includes full content)
+# --------------------------
+class PostDetailSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.username", read_only=True)
     published_at = serializers.DateTimeField(source="created_at", format="%b %d, %Y")
     price = serializers.SerializerMethodField()
     reading_time = serializers.SerializerMethodField()
     meta_description = serializers.CharField(read_only=True)
-    content_preview = serializers.SerializerMethodField()
-
+    content_preview = serializers.SerializerMethodField()  # teaser only
 
     class Meta:
         model = Post
@@ -17,7 +18,8 @@ class PublicPostSerializer(serializers.ModelSerializer):
             "id",
             "slug",
             "title",
-            "excerpt",         
+            "content",          # full content included
+            "content_preview",  # teaser
             "author_name",
             "published_at",
             "category",
@@ -26,28 +28,23 @@ class PublicPostSerializer(serializers.ModelSerializer):
             "price",
             "reading_time",
             "meta_description",
-            "content_preview",
         ]
+
+    def get_content_preview(self, obj):
+        return obj.excerpt  # teaser
 
     def get_price(self, obj):
         return f"{obj.price:.2f}"
 
     def get_reading_time(self, obj):
         words = len(obj.content.split())
-        minutes = max(1, round(words / 200))  # realistic
+        minutes = max(1, round(words / 200))
         return f"{minutes} min read"
-    
-    def get_content_preview(self, obj):
-        return obj.content[:800]
 
 
-class FullPostSerializer(PublicPostSerializer):
-    content = serializers.CharField()
-
-    class Meta(PublicPostSerializer.Meta):
-        fields = PublicPostSerializer.Meta.fields + ["content"]
-
-
+# --------------------------
+# Feedback serializer
+# --------------------------
 class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback

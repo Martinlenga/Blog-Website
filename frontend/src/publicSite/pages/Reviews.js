@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFeedbacksByPost } from "../services/api"; // can use postId=null
+import { getFeedbacksByPost } from "../services/api"; 
 import ReviewForm from "./ReviewForm";
 
 const Reviews = ({ jwt }) => {

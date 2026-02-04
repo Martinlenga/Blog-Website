@@ -1,141 +1,148 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { getPostBySlug } from "../services/api";
-import MpesaModal from "../components/MpesaModal";
+import {
+  getPostBySlug,
+  unlockPost,
+  initiatePayment,
+  pollPostUnlock,
+} from "../services/api";
 import { useAuth } from "../../auth/PublicAuthContext";
+import GoogleLoginButton from "../../auth/GoogleLoginButton";
 import "./PostDetail.css";
 
 const PostDetail = () => {
   const { slug } = useParams();
-  const { jwt, isLoggedIn, login } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   const [post, setPost] = useState(null);
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [showPayModal, setShowPayModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [googleReady, setGoogleReady] = useState(false);
+  const [error, setError] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
-  // Load post
-  useEffect(() => {
+  /* ---------------- Fetch post ---------------- */
+  const fetchPost = useCallback(async () => {
     setLoading(true);
-    getPostBySlug(slug, jwt)
-      .then((data) => {
-        setPost(data);
-        setIsUnlocked(!data.locked);
-      })
-      .finally(() => setLoading(false));
-  }, [slug, jwt]);
+    setError("");
 
-  // Load Google Identity Services script
-  useEffect(() => {
-    if (isLoggedIn) return;
-
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if (window.google && window.google.accounts) {
-        window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-        });
-        console.log(window.location.origin); 
-        console.log(process.env.REACT_APP_GOOGLE_CLIENT_ID)
-        setGoogleReady(true);
-
-        // Immediately show account chooser popup
-        window.google.accounts.id.prompt();
-      }
-    };
-
-    return () => document.body.removeChild(script);
-  }, [isLoggedIn]);
-
-  // Called after Google login
-  const handleGoogleCredentialResponse = async (response) => {
     try {
-      const idToken = response.credential;
-      const res = await fetch(`${process.env.REACT_APP_API_BASE}/google-login/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: idToken }),
-      });
-      const data = await res.json();
-      login(data.jwt, data.user);
-      alert("Logged in successfully!");
+      const data = await getPostBySlug(slug);
+      setPost(data);
     } catch (err) {
-      console.error("Google login failed:", err);
-      alert("Google login failed. Try again.");
+      setError("Failed to load article.");
+    } finally {
+      setLoading(false);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    fetchPost();
+  }, [fetchPost]);
+
+  /* ---------------- Unlock ---------------- */
+  const handleUnlock = async () => {
+    try {
+      setLoading(true);
+      const unlocked = await unlockPost(slug);
+      setPost(unlocked);
+    } catch {
+      setError("Failed to unlock post.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Unlock handler
-  const handleUnlock = () => {
-    if (!isLoggedIn) {
-      alert("Please log in first with Google.");
-      return;
+  /* ---------------- Payment ---------------- */
+  const handlePayment = async () => {
+    const phone = prompt("Enter your MPESA phone number:");
+    if (!phone) return;
+
+    try {
+      setPaymentLoading(true);
+      await initiatePayment(slug, phone);
+      const unlocked = await pollPostUnlock(slug, 30000);
+      setPost(unlocked);
+    } catch (err) {
+      setError(err.message || "Payment failed.");
+    } finally {
+      setPaymentLoading(false);
     }
-    setShowPayModal(true);
   };
 
-  if (loading)
-    return <p className="text-center mt-32 text-gray-500 text-lg">Loading…</p>;
-  if (!post)
-    return <p className="text-center mt-32 text-red-500 text-lg">Post not found</p>;
+  /* ---------------- Guards ---------------- */
+  if (loading) return <p className="text-center mt-32">Loading…</p>;
+  if (error) return <p className="text-center mt-32 text-red-500">{error}</p>;
+  if (!post) return <p className="text-center mt-32">Post not found</p>;
 
-  const publishedDate = post.published_at
-    ? new Date(post.published_at).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : "Unknown";
+  const isUnlocked = !post.locked;
 
   return (
     <main className="post-wrapper">
+      {/* Signed-in banner */}
+      {isLoggedIn && user?.email && (
+        <div className="auth-banner">
+          Signed in as <strong>{user.email}</strong>
+        </div>
+      )}
+
+      {/* Header */}
       <header className="post-header">
-        <h1 className="post-title">{post.title}</h1>
+        <h1>{post.title}</h1>
+
         <div className="post-meta">
-          <span className="meta-author">By: {post.author_name}</span>
-          <span className="meta-category">{post.category || "General"}</span>
-          <span className="meta-date">{publishedDate}</span>
-          <span className="meta-price">KES {post.price}</span>
+          <span>By {post.author_name}</span>
+          <span>{post.category}</span>
+
+          {isUnlocked ? (
+            <span className="badge unlocked">Already unlocked</span>
+          ) : (
+            post.price > 0 && (
+              <span className="meta-price">KES {post.price}</span>
+            )
+          )}
         </div>
       </header>
 
+      {/* Content */}
       <section className={`post-content ${!isUnlocked ? "locked" : ""}`}>
         <article
-          className="content-body"
+          className={`content-body ${!isUnlocked ? "blurred" : ""}`}
           dangerouslySetInnerHTML={{
             __html: isUnlocked ? post.content : post.content_preview,
           }}
         />
 
+        {/* Paywall */}
         {!isUnlocked && (
           <div className="paywall-overlay">
-            <div className="paywall-card">
-              <span className="unlock-icon">🔒</span>
-              <p className="pay-text">Premium Access</p>
-              <p className="pay-price">KES {post.price}</p>
-              <button className="unlock-btn" onClick={handleUnlock}>
-                Unlock
-              </button>
+            <div className="paywall-content">
+              {!isLoggedIn ? (
+                <>
+                  <p>Sign in to continue reading.</p>
+                  <GoogleLoginButton />
+                </>
+              ) : (
+                <>
+                  <button className="unlock-btn" onClick={handleUnlock}>
+                    Unlock Post
+                  </button>
+
+                  {post.price > 0 && (
+                    <button
+                      className="payment-btn"
+                      onClick={handlePayment}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading
+                        ? "Processing…"
+                        : `Pay KES ${post.price}`}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
       </section>
-
-      {showPayModal && (
-        <MpesaModal
-          post={post}
-          jwt={jwt}
-          onClose={() => setShowPayModal(false)}
-          onPaid={() => setIsUnlocked(true)}
-        />
-      )}
     </main>
   );
 };

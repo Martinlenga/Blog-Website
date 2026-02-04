@@ -42,9 +42,9 @@ const ArticleRow = ({ post }) => {
           </Link>
         </h3>
 
-        {/* Excerpt */}
+        {/* Meta Description */}
         <p className="text-gray-600 mt-1 line-clamp-2 text-sm">
-          {post.excerpt}
+          {post.meta_description}
         </p>
 
         {/* Footer: reading time, price & link */}
