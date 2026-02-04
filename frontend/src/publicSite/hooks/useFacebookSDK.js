@@ -1,21 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const useFacebookSDK = () => {
+  const [loaded, setLoaded] = useState(false);
+
   useEffect(() => {
-    // Avoid loading twice
     if (window.FB) {
-      window.FB.XFBML.parse();
+      setLoaded(true);
       return;
     }
 
-    // Add fb-root div if not present
     if (!document.getElementById("fb-root")) {
       const fbRoot = document.createElement("div");
       fbRoot.id = "fb-root";
-      document.body.appendChild(fbRoot);
+      document.body.prepend(fbRoot);
     }
 
-    // Load SDK script
     const script = document.createElement("script");
     script.async = true;
     script.defer = true;
@@ -24,17 +23,16 @@ const useFacebookSDK = () => {
       "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v18.0";
 
     script.onload = () => {
-      if (window.FB) {
-        window.FB.XFBML.parse();
-      }
+      setLoaded(true);
+      if (window.FB) window.FB.XFBML.parse();
     };
 
     document.body.appendChild(script);
 
-    return () => {
-      document.body.removeChild(script);
-    };
+    return () => document.body.removeChild(script);
   }, []);
+
+  return loaded; // we return if FB SDK is ready
 };
 
 export default useFacebookSDK;

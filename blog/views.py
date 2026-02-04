@@ -88,32 +88,41 @@ def post_list(request):
 # Post detail (requires login)
 # --------------------------
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([])  # 👈 PUBLIC
 @authentication_classes([JWTAuthentication])
 def post_detail_by_slug(request, slug):
     post = get_object_or_404(Post, slug=slug)
-    print("📌 Request user:", request.user, "Authenticated:", request.user.is_authenticated)
+
+    user = request.user
+    is_authenticated = user.is_authenticated
+
+    print("📌 Request user:", user, "Authenticated:", is_authenticated)
 
     serializer = PostDetailSerializer(post)
     data = serializer.data
 
-    # Check persistent unlock
-    has_access = PostAccess.objects.filter(post=post, user=request.user).exists()
-    locked = not has_access
+    has_access = False
+    pending_payment = False
 
-    # Pending payment
-    pending_payment = PaymentTransaction.objects.filter(
-        post=post, user=request.user, status="PENDING"
-    ).exists()
+    if is_authenticated:
+        has_access = PostAccess.objects.filter(post=post, user=user).exists()
+        pending_payment = PaymentTransaction.objects.filter(
+            post=post, user=user, status="PENDING"
+        ).exists()
+
+    locked = not has_access
 
     data["locked"] = locked
     data["pending_payment"] = pending_payment
 
-    # Include full content if unlocked
-    if not locked:
+    # 🚨 CRITICAL: protect full content
+    if locked:
+        data["content"] = None
+    else:
         data["content"] = post.content
 
     return Response(data)
+
 
 
 # --------------------------
