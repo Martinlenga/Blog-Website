@@ -84,10 +84,9 @@ export const getPosts = async () => fetchWithAuth(`${API_BASE}/posts/`);
 export const getPostBySlug = async (slug) => fetchWithAuth(`${API_BASE}/posts/${slug}/`);
 
 /* ===================== PERSISTENT UNLOCK ===================== */
+// ⚠️ No longer used directly — unlock happens via Mpesa callback
 export const unlockPost = async (slug) => {
-  const updatedPost = await fetchWithAuth(`${API_BASE}/posts/${slug}/unlock/`, { method: "POST" });
-  console.log("🔓 Unlock response:", updatedPost);
-  return updatedPost;
+  return fetchWithAuth(`${API_BASE}/posts/${slug}/unlock/`, { method: "POST" });
 };
 
 /* ===================== PAYMENTS ===================== */
@@ -102,21 +101,16 @@ export const initiatePayment = async (slug, phone) => {
   }
 
   if (res?.paid) {
-    return getPostBySlug(slug);
+    return { paid: true };
   }
 
   return res;
 };
 
 /* ===================== POLL UNLOCK ===================== */
-export const pollPostUnlock = async (slug, timeout = 20000) => {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    await new Promise((r) => setTimeout(r, 2000));
-    const post = await getPostBySlug(slug);
-    if (post.locked === false) return post;
-  }
-  throw new Error("Payment not confirmed yet");
+export const pollPostUnlock = async (slug) => {
+  const post = await getPostBySlug(slug);
+  return post; // post.locked === false will be handled in modal
 };
 
 /* ===================== FEEDBACK ===================== */

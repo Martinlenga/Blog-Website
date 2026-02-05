@@ -6,6 +6,7 @@ import Overview from "../pages/Dashboard/Overview";
 
 // Posts
 import AllPosts from "../pages/Posts/AllPosts";
+import PostAccess from "../pages/Posts/PostAccess";
 
 // Payments
 import Transactions from "../pages/Payments/Transactions";
@@ -44,6 +45,7 @@ export default function AdminRoutes() {
 
         {/* Posts */}
         <Route path="posts" element={<AllPosts />} />
+        <Route path="posts/access" element={<PostAccess />} />
 
         {/* Payments */}
         <Route path="payments" element={<Transactions />} />

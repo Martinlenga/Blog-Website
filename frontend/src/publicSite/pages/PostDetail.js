@@ -3,14 +3,19 @@ import { useParams } from "react-router-dom";
 import { getPostBySlug, unlockPost } from "../services/api";
 import { useAuth } from "../../auth/PublicAuthContext";
 import useFacebookSDK from "../hooks/useFacebookSDK";
+import MpesaModal from "../components/MpesaModal";
 import "./PostDetail.css";
 
 const PostDetail = () => {
   const { slug } = useParams();
   const { isLoggedIn, user } = useAuth();
+
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // MPESA MODAL STATE (NEW)
+  const [showMpesa, setShowMpesa] = useState(false);
 
   // FB SDK hook
   const fbLoaded = useFacebookSDK();
@@ -37,13 +42,13 @@ const PostDetail = () => {
     window.google.accounts.id.prompt();
   };
 
+  // EXISTING UNLOCK LOGIC (UNCHANGED)
   const handleUnlock = async () => {
     try {
       setLoading(true);
       const unlocked = await unlockPost(slug);
       setPost(unlocked);
 
-      // Parse FB plugin immediately if SDK is loaded
       if (fbLoaded && window.FB) {
         window.FB.XFBML.parse();
       }
@@ -54,7 +59,6 @@ const PostDetail = () => {
     }
   };
 
-  // Parse FB plugin when post is unlocked and SDK is ready
   const isUnlocked = post && !post.locked;
   const postUrl = `https://echoingly-uningrafted-deborah.ngrok-free.dev/posts/${slug}`;
 
@@ -97,20 +101,26 @@ const PostDetail = () => {
           }}
         />
 
-        {/* Paywall overlay */}
+        {/* PAYWALL */}
         {!isUnlocked && (
           <div className="paywall-overlay">
             <div className="paywall-content">
               {!isLoggedIn && (
                 <>
-                  <p className="paywall-text-above">Sign in to read full article</p>
+                  <p className="paywall-text-above">
+                    Sign in to read full article
+                  </p>
                   <button className="google-btn" onClick={handleGooglePrompt}>
                     Continue with Google
                   </button>
                 </>
               )}
+
               {isLoggedIn && (
-                <button className="unlock-btn" onClick={handleUnlock}>
+                <button
+                  className="unlock-btn"
+                  onClick={() => setShowMpesa(true)}
+                >
                   Unlock Post
                 </button>
               )}
@@ -118,24 +128,18 @@ const PostDetail = () => {
           </div>
         )}
 
-        {/* Facebook + Sharing - only after unlock */}
+        {/* COMMENTS + SHARING */}
         {isUnlocked && (
           <div className="facebook-section">
-            {/* Guide */}
-            <p className="fb-guide-text">
-              Join the Conversation
-            </p>
+            <p className="fb-guide-text">Join the Conversation</p>
 
-            {/* FB Comments plugin */}
             <div
               className="fb-comments"
               data-href={postUrl}
               data-width="100%"
               data-numposts="5"
-              data-order-by="social"
             ></div>
 
-            {/* Share section with guide + icons inline */}
             <div className="share-section">
               <span className="share-guide">Share this article using:</span>
               <div className="share-icons">
@@ -146,7 +150,6 @@ const PostDetail = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="share-icon twitter"
-                  aria-label="Share on Twitter"
                 >
                   <i className="fab fa-twitter"></i>
                 </a>
@@ -158,7 +161,6 @@ const PostDetail = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="share-icon linkedin"
-                  aria-label="Share on LinkedIn"
                 >
                   <i className="fab fa-linkedin-in"></i>
                 </a>
@@ -170,7 +172,6 @@ const PostDetail = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="share-icon whatsapp"
-                  aria-label="Share on WhatsApp"
                 >
                   <i className="fab fa-whatsapp"></i>
                 </a>
@@ -179,6 +180,19 @@ const PostDetail = () => {
           </div>
         )}
       </section>
+
+      {/* MPESA MODAL (NEW, CLEAN) */}
+      {showMpesa && (
+        <MpesaModal
+          post={post}
+          onClose={() => setShowMpesa(false)}
+          onPaid={() => {
+            setShowMpesa(false);   // 👈 CLOSE FIRST
+            handleUnlock();       // 👈 THEN unlock
+          }}
+        />
+
+      )}
     </main>
   );
 };

@@ -21,15 +21,51 @@ export default function AdminSidebar({ open = true }) {
   };
 
   const menu = [
-    { key: "dashboard", label: "Dashboard", icon: Home, items: [{ label: "Overview", path: "/admin/dashboard/overview" }] },
-    { key: "posts", label: "Posts", icon: FileText, items: [{ label: "All Posts", path: "/admin/posts" }] },
-    { key: "payments", label: "Payments", icon: DollarSign, 
-        items: [{ label: "Transactions", path: "/admin/payments" },{ label: "Financial Trends", path: "/admin/payments/trends" },]},
-    { key: "feedback", label: "Feedback", icon: MessageSquare, 
-    items: [{ label: "Reviews", path: "/admin/feedback" },{ label: "Analytics", path: "/admin/feedback/analytics" },]},
-
-    { key: "system", label: "System", icon: Folder, items: [{ label: "Audit Logs", path: "/admin/system/audit-logs" }] },
+    { 
+      key: "dashboard", 
+      label: "Dashboard", 
+      icon: Home, 
+      items: [
+        { label: "Overview", path: "/admin/dashboard/overview" }
+      ] 
+    },
+    { 
+      key: "posts", 
+      label: "Posts", 
+      icon: FileText, 
+      items: [
+        { label: "All Posts", path: "/admin/posts" },
+        { label: "Post Access", path: "/admin/posts/access" } // <-- new item
+      ] 
+    },
+    { 
+      key: "payments", 
+      label: "Payments", 
+      icon: DollarSign, 
+      items: [
+        { label: "Transactions", path: "/admin/payments" },
+        { label: "Financial Trends", path: "/admin/payments/trends" },
+      ]
+    },
+    { 
+      key: "feedback", 
+      label: "Feedback", 
+      icon: MessageSquare, 
+      items: [
+        { label: "Reviews", path: "/admin/feedback" },
+        { label: "Analytics", path: "/admin/feedback/analytics" },
+      ]
+    },
+    { 
+      key: "system", 
+      label: "System", 
+      icon: Folder, 
+      items: [
+        { label: "Audit Logs", path: "/admin/system/audit-logs" }
+      ] 
+    },
   ];
+
 
   return (
     <aside

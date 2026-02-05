@@ -11,12 +11,14 @@ from .admin_views import (
     AdminChangePasswordView,
     AdminPasswordResetRequestView,
     AdminPasswordResetView,
+    AdminPostAccessViewSet,
 )
 
 from .admin_auth import AdminLoginView, AdminLogoutView
 
 
 router = DefaultRouter()
+router.register(r'posts/access', AdminPostAccessViewSet, basename='post-access')
 router.register(r"posts", AdminPostViewSet, basename="admin-posts")
 router.register(r"payments", AdminPaymentViewSet, basename="admin-payments")
 router.register(r"feedbacks", AdminFeedbackViewSet, basename="admin-feedbacks")

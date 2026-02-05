@@ -144,6 +144,22 @@ export const updateFeedbackStatus = (id, isApproved) =>
 export const getFeedbackAnalytics = () => API.get("feedbacks/analytics/");
 
 /* =========================
+   POST ACCESS
+========================= */
+export const getAdminPostAccess = ({
+  page = 1,
+  pageSize = 10,
+  search = "",
+  category = "",
+  date_range = "",
+  ordering = "-granted_at",
+} = {}) => {
+  return API.get("posts/access/", {
+    params: { page, page_size: pageSize, search, category, date_range, ordering },
+  });
+};
+
+/* =========================
    PROFILE
 ========================= */
 export const getAdminProfile = () => API.get("profile/");

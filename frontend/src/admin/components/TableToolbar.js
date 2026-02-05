@@ -8,6 +8,7 @@ export default function TableToolbar({
   category,
   setCategory,
   categories,
+  showPriceFilter = true, // <-- new prop to hide price inputs
   minPrice,
   setMinPrice,
   maxPrice,
@@ -42,7 +43,7 @@ export default function TableToolbar({
           onChange={(e) => setDateRange(e.target.value)}
           className="border rounded-lg px-3 py-2 text-sm"
         >
-          <option value="">Created at</option>
+          <option value="">Granted at</option>
           <option value="today">Today</option>
           <option value="7">Last 7 days</option>
           <option value="14">Last 14 days</option>
@@ -56,30 +57,33 @@ export default function TableToolbar({
           className="border rounded-lg px-3 py-2 text-sm"
         >
           <option value="">All categories</option>
-          {categories?.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
+          {Array.isArray(categories) &&
+            categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
         </select>
 
-        {/* Min Price */}
-        <input
-          type="number"
-          placeholder="Min price"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-          className="border rounded-lg px-3 py-2 text-sm"
-        />
-
-        {/* Max Price */}
-        <input
-          type="number"
-          placeholder="Max price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-          className="border rounded-lg px-3 py-2 text-sm"
-        />
+        {/* Optional Min/Max Price */}
+        {showPriceFilter && (
+          <>
+            <input
+              type="number"
+              placeholder="Min price"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="border rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="number"
+              placeholder="Max price"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="border rounded-lg px-3 py-2 text-sm"
+            />
+          </>
+        )}
       </div>
     </div>
   );

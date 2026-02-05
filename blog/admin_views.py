@@ -7,7 +7,9 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import filters
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, ChoiceFilter
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
@@ -33,6 +35,7 @@ from .models import (
     Feedback,
     AdminAuditLog,
     AdminProfile,
+    PostAccess,
 )
 from .admin_serializers import (
     AdminPostSerializer,
@@ -41,7 +44,8 @@ from .admin_serializers import (
     AdminAuditLogSerializer,
     AdminProfileSerializer,
     AdminPasswordResetRequestSerializer,
-    AdminPasswordResetSerializer
+    AdminPasswordResetSerializer,
+    AdminPostAccessSerializer,
 
 )
 from .pagination import AdminPagination
@@ -537,6 +541,39 @@ class AdminDashboardViewSet(ViewSet):
             "revenue_trend": monthly_chart,
         })
 
+
+class AdminPostAccessViewSet(ReadOnlyModelViewSet):
+    serializer_class = AdminPostAccessSerializer
+    permission_classes = [IsAdminUser]
+    pagination_class = AdminPagination
+
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ["post__title", "user__email"]
+    ordering_fields = ["granted_at", "post__title"]
+    ordering = ["-granted_at"]
+
+    def get_queryset(self):
+        queryset = PostAccess.objects.select_related("post", "user").order_by("-granted_at")
+
+        # 🔎 Filter by Post category
+        category = self.request.query_params.get("category")
+        if category:
+            queryset = queryset.filter(post__category=category)
+
+        # 📅 Filter by granted_at date range
+        date_range = self.request.query_params.get("date_range")
+        if date_range:
+            now = timezone.now()
+            if date_range == "today":
+                queryset = queryset.filter(granted_at__date=now.date())
+            else:
+                try:
+                    days = int(date_range)
+                    queryset = queryset.filter(granted_at__gte=now - timedelta(days=days))
+                except ValueError:
+                    pass  # ignore invalid input
+
+        return queryset
 
 
 # Audit Logs

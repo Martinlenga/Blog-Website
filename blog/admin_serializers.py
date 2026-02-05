@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Post, PaymentTransaction, Feedback, AdminAuditLog, AdminProfile
+from .models import Post, PaymentTransaction, Feedback, AdminAuditLog, AdminProfile, PostAccess
 
 
 # -----------------------------
@@ -84,6 +84,19 @@ class AdminPostSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["author"] = self.context["request"].user
         return super().create(validated_data)
+
+
+
+class AdminPostAccessSerializer(serializers.ModelSerializer):
+    post_title = serializers.CharField(source="post.title", read_only=True)
+    post_category = serializers.CharField(source="post.category", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = PostAccess
+        fields = ["id", "post", "post_title", "post_category", "user_email", "granted_at"]
+        read_only_fields = fields  # everything read-only
+
 
 
 # -----------------------------

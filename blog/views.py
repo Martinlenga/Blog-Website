@@ -14,6 +14,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from requests.exceptions import HTTPError
 
 from .models import Post, PaymentTransaction, PostAccess, Feedback
 from .serializers import PostDetailSerializer, FeedbackSerializer
@@ -146,7 +147,7 @@ def unlock_post(request, slug):
 
 
 # --------------------------
-# Initiate payment
+# Initiate payment endpoint
 # --------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -171,7 +172,7 @@ def initiate_payment(request, slug):
             "tx_id": existing_tx.id,
         })
 
-    # Create transaction and initiate STK push
+    # Create transaction
     tx = PaymentTransaction.objects.create(
         post=post,
         user=user,
@@ -180,12 +181,18 @@ def initiate_payment(request, slug):
         status="PENDING"
     )
 
-    res = initiate_stk_push(
-        phone_number=phone,
-        amount=int(post.price),
-        account_reference=f"POST-{post.id}",
-        transaction_desc=f"Payment for {post.title}",
-    )
+    try:
+        res = initiate_stk_push(
+            phone_number=phone,
+            amount=int(post.price),
+            account_reference=f"POST-{post.id}",
+            transaction_desc=f"Payment for {post.title}",
+        )
+    except HTTPError as e:
+        tx.status = "FAILED"
+        tx.result_desc = str(e)
+        tx.save()
+        return Response({"error": "STK push failed", "details": str(e)}, status=500)
 
     tx.checkout_request_id = res.get("CheckoutRequestID")
     tx.save()
@@ -193,12 +200,12 @@ def initiate_payment(request, slug):
     return Response({
         "message": "STK push sent",
         "tx_id": tx.id,
+        "response": res,
         "paid": False
     })
 
-
 # --------------------------
-# Mpesa callback
+# Mpesa callback endpoint
 # --------------------------
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -235,7 +242,7 @@ def mpesa_callback(request):
     tx.status = "SUCCESS"
     tx.save()
 
-    # Grant persistent access
+    # Grant access
     PostAccess.objects.get_or_create(post=tx.post, user=tx.user)
 
     return JsonResponse({"status": "success"})
