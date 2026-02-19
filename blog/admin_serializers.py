@@ -75,16 +75,31 @@ class AdminPostSerializer(serializers.ModelSerializer):
         slug_field="username"
     )
     
+    # Computed field for conversion rate
+    conversion_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = "__all__"
-        read_only_fields = ["author", "slug", "created_at", "updated_at"]
+        fields = [
+            "id", "title", "slug", "excerpt", "content", "author", 
+            "banner_image", "category", "featured", "is_published",
+            "price", "meta_description", "views", "reading_time_minutes",
+            "conversion_rate", "created_at", "updated_at"
+        ]
+        read_only_fields = ["author", "slug", "created_at", "updated_at", "views", "reading_time_minutes", "conversion_rate"]
 
     def create(self, validated_data):
         validated_data["author"] = self.context["request"].user
         return super().create(validated_data)
 
+    def get_conversion_rate(self, obj):
+        # Prevent division by zero
+        if obj.views == 0:
+            return "0.0%"
+        # Count successful payments for this post
+        purchases = PaymentTransaction.objects.filter(post=obj, status="SUCCESS").count()
+        rate = (purchases / obj.views) * 100
+        return f"{rate:.1f}%"
 
 
 class AdminPostAccessSerializer(serializers.ModelSerializer):
@@ -153,4 +168,3 @@ class AdminAuditLogSerializer(serializers.ModelSerializer):
         model = AdminAuditLog
         fields = "__all__"
         read_only_fields = ["admin", "timestamp"]
-

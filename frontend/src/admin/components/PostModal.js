@@ -1,227 +1,273 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Upload, Loader, Eye, EyeOff } from "lucide-react";
 import { createAdminPost, updateAdminPost } from "../services/adminApi";
-import placeholder from "../../assets/article-placeholder.jpg"; // adjust path to your assets
+import placeholder from "../../assets/article-placeholder.jpg";
+
+// React Quill
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 export default function PostModal({ open, post, onClose, refresh }) {
-  const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [content, setContent] = useState("");
-  const [category, setCategory] = useState("");
-  const [price, setPrice] = useState(""); // backend default respected
-  const [featured, setFeatured] = useState(false);
-  const [banner, setBanner] = useState(null); // new file upload
-  const [preview, setPreview] = useState(placeholder); // use placeholder by default
-  const [metaDescription, setMetaDescription] = useState("");
+  const [formData, setFormData] = useState({
+    title: "", excerpt: "", content: "", category: "General", 
+    price: "150.00", featured: false, is_published: true, meta_description: ""
+  });
+
+  const [banner, setBanner] = useState(null);
+  const [preview, setPreview] = useState(placeholder);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Populate form when editing a post or creating new
   useEffect(() => {
-    setTitle(post?.title || "");
-    setExcerpt(post?.excerpt || "");
-    setContent(post?.content || "");
-    
-    // Use backend defaults if creating a new post
-    setCategory(post?.category || "General");
-    setPrice(
-      post?.price !== undefined && post?.price !== null
-        ? Number(post.price).toFixed(2)
-        : "150.00"
-    );
-
-    setFeatured(post?.featured || false);
-    setMetaDescription(post?.meta_description || "");
-    setBanner(null);
-
-    // Decide preview image: backend URL or placeholder
-    const imageUrl = post?.banner_image
-      ? post.banner_image.startsWith("http")
-        ? post.banner_image
-        : `http://127.0.0.1:8000${post.banner_image}`
-      : placeholder;
-    setPreview(imageUrl);
-
+    if (post) {
+      setFormData({
+        title: post.title || "",
+        excerpt: post.excerpt || "",
+        content: post.content || "",
+        category: post.category || "General",
+        price: post.price ? Number(post.price).toFixed(2) : "150.00",
+        featured: post.featured || false,
+        is_published: post.is_published !== undefined ? post.is_published : true,
+        meta_description: post.meta_description || ""
+      });
+      const img = post.banner_image ? (post.banner_image.startsWith("http") ? post.banner_image : `${process.env.REACT_APP_API_URL?.replace("/api", "")}${post.banner_image}`) : placeholder;
+      setPreview(img);
+    } else {
+      setFormData({ title: "", excerpt: "", content: "", category: "General", price: "150.00", featured: false, is_published: true, meta_description: "" });
+      setPreview(placeholder);
+      setBanner(null);
+    }
     setErrors({});
-  }, [post]);
+  }, [post, open]);
 
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+  };
 
-  const handleBannerChange = (e) => {
+  const handleContentChange = (value) => {
+    setFormData(prev => ({ ...prev, content: value }));
+  };
+
+  const handleFile = (e) => {
     const file = e.target.files[0];
     if (file) {
       setBanner(file);
-      setPreview(URL.createObjectURL(file)); // immediate preview
+      setPreview(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setErrors({});
+
+    const payload = new FormData();
+    Object.keys(formData).forEach((key) => {
+      if (typeof formData[key] === "boolean") {
+        payload.append(key, formData[key] ? "true" : "false");
+      } else {
+        payload.append(key, formData[key]);
+      }
+    });
+    if (banner) payload.append("banner_image", banner);
 
     try {
-      const data = new FormData();
-      data.append("title", title);
-      data.append("excerpt", excerpt);
-      data.append("content", content);
-      data.append("category", category);
-      if (price !== "") data.append("price", price.toString());
-      data.append("featured", featured ? "true" : "false");
-      data.append("meta_description", metaDescription);
-      if (banner) data.append("banner_image", banner);
-
-      if (post) {
-        await updateAdminPost(post.slug, data);
-      } else {
-        await createAdminPost(data);
-      }
-
+      if (post) await updateAdminPost(post.slug, payload);
+      else await createAdminPost(payload);
       refresh();
       onClose();
     } catch (err) {
-      console.error("Backend error:", err.response || err);
-      if (err.response && err.response.data) setErrors(err.response.data);
-      else alert("Unexpected error: Could not save post.");
+      console.error(err);
+      setErrors(err.response?.data || {});
     } finally {
       setLoading(false);
     }
   };
 
+  // 🔴 EXPANDED TOOLBAR OPTIONS
+  const quillModules = {
+    toolbar: [
+      [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }], // Fonts & Sizes
+      [{ 'header': [1, 2, 3, 4, false] }], // Headings
+      ['bold', 'italic', 'underline', 'strike'], // Styles
+      [{ 'color': [] }, { 'background': [] }], // Colors
+      [{ 'align': [] }], // Alignment
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }], // Lists
+      ['blockquote', 'code-block'], // Blocks
+      ['link', 'image', 'video'], // Media
+      ['clean'] // Remove formatting
+    ],
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-2xl rounded-lg shadow-lg overflow-y-auto max-h-[90vh] p-6 relative">
-        <button
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-          onClick={onClose}
-        >
-          <X />
-        </button>
-        <h2 className="text-xl font-bold mb-4">{post ? "Edit Post" : "New Post"}</h2>
+    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      
+      {/* 🔴 STICKY TOOLBAR CSS OVERRIDES */}
+      <style>{`
+        .quill-editor .ql-toolbar.ql-snow {
+          position: sticky;
+          top: -32px; /* Offsets the p-8 padding exactly */
+          z-index: 50;
+          background: rgba(249, 250, 251, 0.98);
+          backdrop-filter: blur(8px);
+          border: none;
+          border-bottom: 1px solid #e5e7eb;
+          border-radius: 12px 12px 0 0;
+          padding: 12px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .quill-editor .ql-container.ql-snow {
+          border: none;
+          min-height: 450px;
+          font-size: 16px;
+          font-family: inherit;
+        }
+      `}</style>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
+      <div className="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+
+        {/* HEADER */}
+        <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
           <div>
-            <label className="block font-medium mb-1">Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.title && <p className="text-red-600 text-sm">{errors.title}</p>}
+            <h2 className="font-serif text-xl font-bold text-gray-900">
+              {post ? "Edit Article" : "New Article"}
+            </h2>
           </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-200 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
 
-          {/* Excerpt */}
-          <div>
-            <label className="block font-medium mb-1">Excerpt</label>
-            <input
-              type="text"
-              value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
-              placeholder="Short summary"
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.excerpt && <p className="text-red-600 text-sm">{errors.excerpt}</p>}
-          </div>
+        {/* SCROLLABLE BODY */}
+        <div className="overflow-y-auto p-8 flex-1 custom-scrollbar bg-white relative">
+          <form id="post-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-4 gap-10 relative">
 
-          {/* Content */}
-          <div>
-            <label className="block font-medium mb-1">Content</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={5}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.content && <p className="text-red-600 text-sm">{errors.content}</p>}
-          </div>
+            {/* LEFT COLUMN (Wide Editor) */}
+            <div className="lg:col-span-3 space-y-6">
 
-          {/* Category */}
-          <div>
-            <label className="block font-medium mb-1">Category</label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Type category"
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.category && <p className="text-red-600 text-sm">{errors.category}</p>}
-          </div>
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Title</label>
+                <input
+                  name="title" value={formData.title} onChange={handleChange} required
+                  className="w-full px-0 py-2 text-4xl font-serif font-black border-b-2 border-gray-100 focus:border-indigo-600 outline-none transition-colors bg-transparent placeholder:text-gray-200"
+                  placeholder="Type your title here..."
+                />
+              </div>
 
-          {/* Meta Description */}
-          <div>
-            <label className="block font-medium mb-1">Meta Description</label>
-            <input
-              type="text"
-              value={metaDescription}
-              onChange={(e) => setMetaDescription(e.target.value)}
-              placeholder="Meta description"
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.meta_description && <p className="text-red-600 text-sm">{errors.meta_description}</p>}
-          </div>
+              {/* Excerpt */}
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Excerpt</label>
+                <textarea
+                  name="excerpt" value={formData.excerpt} onChange={handleChange} rows={2}
+                  className="w-full px-4 py-3 text-sm text-gray-800 bg-gray-50 rounded-xl border border-transparent focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none font-medium"
+                  placeholder="A short, catchy summary..."
+                />
+              </div>
 
-          {/* Price + Featured */}
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block font-medium mb-1">Price (Kshs.)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="Leave empty to use default"
-                className="w-full border rounded px-3 py-2"
-              />
-              {errors.price && <p className="text-red-600 text-sm">{errors.price}</p>}
+              {/* RICH TEXT CONTENT */}
+              <div className="quill-editor relative">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Body Content</label>
+                <div className="border border-gray-200 rounded-xl focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all bg-white relative">
+                  <ReactQuill 
+                    theme="snow"
+                    value={formData.content} 
+                    onChange={handleContentChange} 
+                    modules={quillModules}
+                    placeholder="Write your story here..."
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-6">
-              <input
-                type="checkbox"
-                checked={featured}
-                onChange={(e) => setFeatured(e.target.checked)}
-              />
-              <span>Featured</span>
+            {/* RIGHT COLUMN (Settings) */}
+            <div className="space-y-8">
+
+              {/* Cover Image */}
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cover Image</label>
+                <div className="relative group rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 h-48 hover:border-indigo-400 transition-colors">
+                  <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                    <Upload className="text-white mb-2" size={24} />
+                    <span className="text-white text-xs font-bold uppercase tracking-wider">Change Image</span>
+                  </div>
+                  <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFile} accept="image/*" />
+                </div>
+              </div>
+
+              {/* Visibility */}
+              <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-bold text-gray-700">Visibility</label>
+                  <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, is_published: true }))}
+                      className={`p-1.5 rounded ${formData.is_published ? "bg-emerald-100 text-emerald-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+                      title="Publish"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, is_published: false }))}
+                      className={`p-1.5 rounded ${!formData.is_published ? "bg-amber-100 text-amber-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+                      title="Save as Draft"
+                    >
+                      <EyeOff size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta Section */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Category</label>
+                  <input
+                    name="category" value={formData.category} onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border-b border-gray-200 focus:border-indigo-600 outline-none bg-transparent font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Price (KES)</label>
+                  <input
+                    type="number" name="price" value={formData.price} onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border-b border-gray-200 focus:border-indigo-600 outline-none bg-transparent font-mono font-bold text-emerald-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">SEO Summary</label>
+                  <textarea
+                    name="meta_description" value={formData.meta_description} onChange={handleChange} rows={3} maxLength={160}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-indigo-600 outline-none resize-none bg-gray-50"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1 text-right">{formData.meta_description.length}/160 chars</p>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <input type="checkbox" id="featuredCheck" name="featured" checked={formData.featured} onChange={handleChange} className="w-4 h-4 text-indigo-600 cursor-pointer" />
+                  <label htmlFor="featuredCheck" className="text-sm font-bold text-gray-700 cursor-pointer">Pin as Featured Story</label>
+                </div>
+              </div>
+
             </div>
-          </div>
+          </form>
+        </div>
 
-          {/* Banner Image */}
-          <div>
-            <label className="block font-medium mb-1">Banner Image</label>
-            <input type="file" accept="image/*" onChange={handleBannerChange} />
-            {preview && (
-              <img
-                src={preview}
-                alt="Banner Preview"
-                className="w-32 h-16 object-cover mt-2 rounded"
-              />
-            )}
-            {errors.banner_image && <p className="text-red-600 text-sm">{errors.banner_image}</p>}
-          </div>
+        {/* FOOTER */}
+        <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 z-50">
+          <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+          <button type="submit" form="post-form" disabled={loading} className="px-8 py-2.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
+            {loading ? <Loader size={16} className="animate-spin" /> : "Save Article"}
+          </button>
+        </div>
 
-          {/* Buttons */}
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {post ? "Update" : "Create"}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );

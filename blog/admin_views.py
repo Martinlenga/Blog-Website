@@ -1,29 +1,28 @@
+import csv
+from django.http import HttpResponse
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSet, ReadOnlyModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import filters
+from rest_framework import status, filters
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from django_filters.rest_framework import DjangoFilterBackend, FilterSet, ChoiceFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 from django.conf import settings
 
 from django.utils import timezone
-from django.db.models import Sum, Count, Avg
+from django.db.models import Sum, Count, Avg, F
 from django.db.models.functions import TruncMonth, TruncYear, TruncDate, TruncWeek
 from django.utils.timezone import now
 from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from django_filters.rest_framework import DjangoFilterBackend
 
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -193,7 +192,9 @@ class AdminPasswordResetView(APIView):
             status=status.HTTP_200_OK
         )
 
-# Admin Post
+# -------------------------
+# Admin Post ViewSet
+# -------------------------
 class AdminPostViewSet(ModelViewSet):
     queryset = Post.objects.select_related("author").order_by("-created_at")
     serializer_class = AdminPostSerializer
@@ -202,7 +203,8 @@ class AdminPostViewSet(ModelViewSet):
     lookup_field = "slug"
 
     # Global search across multiple fields
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filterset_fields = ["category", "featured", "is_published"]
     search_fields = ["title", "category", "content", "meta_description", "author__username"]
 
     def get_queryset(self):
@@ -277,16 +279,19 @@ class AdminPostViewSet(ModelViewSet):
         return Response({"categories": list(categories)})
 
 
-# Admin Payment
+# -------------------------
+# Admin Payment ViewSet
+# -------------------------
 class AdminPaymentViewSet(ModelViewSet):
     queryset = PaymentTransaction.objects.select_related("post").order_by("-created_at")
     serializer_class = AdminPaymentSerializer
     permission_classes = [IsAdminUser]
     pagination_class = AdminPagination
 
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["phone", "post__title"]
-    ordering_fields = ["created_at", "amount", "status"]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    filterset_fields = ["status"]
+    search_fields = ["phone", "post__title", "mpesa_receipt"]
+    ordering_fields = ["created_at", "amount"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -294,6 +299,34 @@ class AdminPaymentViewSet(ModelViewSet):
         if status:
             queryset = queryset.filter(status=status)
         return queryset
+
+    # ⭐ NEW FEATURE: Export Payments to CSV
+    @action(detail=False, methods=["get"])
+    def export_csv(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="payments_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(["Date", "Phone", "Amount", "Status", "Receipt", "Post Title"])
+
+        # Respect current filters if possible, or export all
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        for tx in queryset:
+            writer.writerow([
+                tx.created_at.strftime("%Y-%m-%d %H:%M"),
+                tx.phone,
+                tx.amount,
+                tx.status,
+                tx.mpesa_receipt or "-",
+                tx.post.title
+            ])
+        
+        # Log this action
+        AdminAuditLog.objects.create(
+            admin=request.user, action="EXPORT", model_name="PaymentTransaction"
+        )
+        return response
 
     # =========================
     # 📊 Analytics Endpoint
@@ -404,7 +437,6 @@ class AdminPaymentViewSet(ModelViewSet):
         })
 
 
-
 # Admin Feedback
 class AdminFeedbackViewSet(ModelViewSet):
     queryset = Feedback.objects.all().order_by("-created_at")
@@ -447,7 +479,10 @@ class AdminFeedbackViewSet(ModelViewSet):
             "rating_distribution": list(rating_dist),
         })
 
+
+# -------------------------
 # Admin Dashboard
+# -------------------------
 class AdminDashboardViewSet(ViewSet):
     permission_classes = [IsAdminUser]
 
@@ -456,7 +491,7 @@ class AdminDashboardViewSet(ViewSet):
         this_month_start = today.replace(day=1)
         last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
 
-        # KPI CARDS
+        # 1. Revenue
         this_month_revenue = PaymentTransaction.objects.filter(
             status="SUCCESS", created_at__gte=this_month_start
         ).aggregate(total=Sum("amount"))["total"] or 0
@@ -466,6 +501,9 @@ class AdminDashboardViewSet(ViewSet):
             created_at__gte=last_month_start,
             created_at__lt=this_month_start,
         ).aggregate(total=Sum("amount"))["total"] or 0
+
+        # 2. Total Views (Site Traffic) - NEW
+        total_views = Post.objects.aggregate(total=Sum("views"))["total"] or 0
 
         # CUSTOMER BEHAVIOR
         total_customers = PaymentTransaction.objects.values("phone").distinct().count()
@@ -484,21 +522,44 @@ class AdminDashboardViewSet(ViewSet):
             .count()
         )
 
-        # TOP POSTS BY REVENUE
-        top_posts = (
+        # 3. Top Posts (Added Conversion Rate & Views) - NEW
+        top_posts_qs = (
             PaymentTransaction.objects.filter(status="SUCCESS")
-            .values("post__id", "post__title", "post__price")
-            .annotate(
-                revenue=Sum("amount"),
-                sales=Count("id"),
-            )
-            .order_by("-revenue")[:10]
+            .values("post__id", "post__title", "post__price", "post__views")
+            .annotate(revenue=Sum("amount"), sales=Count("id"))
+            .order_by("-revenue")[:5]
         )
+        
+        top_posts = []
+        for p in top_posts_qs:
+            views = p["post__views"] or 1 # Avoid div zero
+            sales = p["sales"]
+            conversion = (sales / views) * 100 if views > 0 else 0
+            
+            top_posts.append({
+                "title": p["post__title"],
+                "revenue": p["revenue"],
+                "sales": sales,
+                "views": views,
+                "conversion_rate": round(conversion, 1)
+            })
 
         # FEATURED POST (only one active)
-        featured_post = Post.objects.filter(featured=True).values(
-            "id", "title", "banner_image", "price"
-        ).first()  # returns dict or None
+        post = Post.objects.filter(featured=True).first()
+
+        featured_post = None
+
+        if post:
+            featured_post = {
+                "id": post.id,
+                "title": post.title,
+                "banner_image": request.build_absolute_uri(post.banner_image.url) if post.banner_image else None,
+                "price": post.price,
+                "category": post.category,
+                "created_at": post.created_at,
+                "author": post.author.username,
+            }
+
 
         # MONTHLY TREND (12 months)
         one_year_ago = today - timedelta(days=365)
@@ -531,13 +592,14 @@ class AdminDashboardViewSet(ViewSet):
                     ((this_month_revenue - last_month_revenue) / last_month_revenue) * 100
                     if last_month_revenue > 0 else 0
                 ),
+                "total_views": total_views, # Added Total Views to KPIs
                 "total_customers": total_customers,
                 "repeat_customers": repeat_customers,
                 "new_customers": new_customers,
                 "feedback_count": feedback_count,
             },
             "featured_post": featured_post,
-            "top_posts": list(top_posts),
+            "top_posts": top_posts, # Uses the new structure
             "revenue_trend": monthly_chart,
         })
 
@@ -602,6 +664,3 @@ class AdminAuditLogViewSet(ModelViewSet):
     ]
     ordering_fields = ["timestamp", "action", "model_name"]
     ordering = ["-timestamp"]
-
-
-

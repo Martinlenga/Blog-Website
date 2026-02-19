@@ -1,36 +1,24 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { getAdminProfile } from "../services/adminApi";
+import { useAdmin } from "../context/AdminContext";
+import { Navigate, useLocation } from "react-router-dom";
 
-export default function AdminProtectedRoute({ children }) {
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+const AdminProtectedRoute = ({ children }) => {
+  const { admin, loading } = useAdmin();
+  const location = useLocation();
 
-  useEffect(() => {
-    const token = localStorage.getItem("admin_access");
-    if (!token) {
-      setLoading(false);
-      return setAuthorized(false);
-    }
-
-    getAdminProfile()
-      .then(() => setAuthorized(true))
-      .catch(() => {
-        localStorage.removeItem("admin_access");
-        localStorage.removeItem("admin_refresh");
-        setAuthorized(false);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading)
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Loading...</p>
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
+  }
 
-  if (!authorized) return <Navigate to="/admin/login" replace />;
+  if (!admin) {
+    // Redirect to login, but remember where they were trying to go
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+  }
 
   return children;
-}
+};
+
+export default AdminProtectedRoute;

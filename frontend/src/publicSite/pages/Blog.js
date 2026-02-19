@@ -18,14 +18,15 @@ const Blog = () => {
     const fetchPosts = async () => {
       setLoading(true);
       setError("");
-
       try {
-        const data = await getPosts(); // public
+        const data = await getPosts(); 
         const normalized = [
           ...(data?.featured ? [data.featured] : []),
           ...(Array.isArray(data?.posts) ? data.posts : []),
         ];
-        setPosts(normalized);
+        // Remove duplicates just in case
+        const unique = normalized.filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i);
+        setPosts(unique);
       } catch (err) {
         console.error(err);
         setError("Failed to load articles.");
@@ -33,14 +34,10 @@ const Blog = () => {
         setLoading(false);
       }
     };
-
     fetchPosts();
   }, []);
 
-  const featuredPost = useMemo(
-    () => posts.find((p) => p?.featured),
-    [posts]
-  );
+  const featuredPost = useMemo(() => posts.find((p) => p?.featured), [posts]);
 
   const filteredPosts = useMemo(() => {
     const q = query.toLowerCase();
@@ -50,55 +47,76 @@ const Blog = () => {
         (
           p?.title?.toLowerCase().includes(q) ||
           p?.meta_description?.toLowerCase().includes(q) ||
-          p?.category?.toLowerCase().includes(q)
+          (typeof p?.category === 'string' && p.category.toLowerCase().includes(q)) ||
+          (typeof p?.category === 'object' && p?.category?.name?.toLowerCase().includes(q))
         )
     );
   }, [posts, query]);
 
   return (
-    <main className="bg-white min-h-screen pt-24 pb-16">
+    <main className="bg-white min-h-screen pt-28 pb-20">
       <Helmet>
-        <title>Blog | My Blog</title>
+        <title>Library | JK Ithaguru</title>
       </Helmet>
 
-      <div className="max-w-6xl mx-auto px-4">
-        <header className="text-center mb-6">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
-            Articles & Stories
+      <div className="max-w-7xl mx-auto px-6 md:px-12">
+        
+        {/* HEADER */}
+        <header className="text-center max-w-3xl mx-auto mb-16">
+          <p className="text-indigo-600 font-bold tracking-widest uppercase text-xs mb-4">
+            The Archives
+          </p>
+
+          <h1 className="font-serif text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            Stories & Insights
           </h1>
-          <p className="mt-2 text-gray-600">
-            Thoughtful stories, premium insights, and carefully crafted reads.
+
+          <p className="text-xl text-gray-500 leading-relaxed font-light">
+            Explore our collection of thoughtful writing, premium insights, and carefully crafted reads.
           </p>
         </header>
 
-        <div className="mt-2 mb-6 max-w-xl mx-auto">
+        {/* SEARCH */}
+        <div className="mb-20">
           <BlogSearch value={query} onChange={setQuery} />
         </div>
 
+        {/* CONTENT */}
         {loading && <BlogSkeleton />}
 
         {!loading && error && (
-          <p className="text-center text-red-500 mt-6">{error}</p>
+          <div className="text-center py-20 bg-red-50 rounded-3xl">
+            <p className="text-red-600 font-medium">{error}</p>
+          </div>
         )}
 
         {!loading && !error && (
           <>
-            {featuredPost && (
-              <section className="mb-6">
-                <SectionHeader title="Trending" />
+            {/* Featured Section */}
+            {featuredPost && !query && (
+              <section className="mb-24">
+                <div className="flex items-center gap-4 mb-8">
+                   <h2 className="font-serif text-2xl font-bold text-gray-900">Trending Now</h2>
+                   <div className="h-[1px] flex-1 bg-gray-100"></div>
+                </div>
                 <BlogFeaturedRow post={featuredPost} />
-                <div className="border-t mt-4 mb-6" />
               </section>
             )}
 
-            <section className="mt-6">
-              <SectionHeader title="Latest Articles" />
+            {/* List Section */}
+            <section>
+              <div className="flex items-center gap-4 mb-8">
+                 <h2 className="font-serif text-2xl font-bold text-gray-900">
+                   {query ? `Search Results for "${query}"` : "Latest Publications"}
+                 </h2>
+                 <div className="h-[1px] flex-1 bg-gray-100"></div>
+              </div>
 
-              <div className="divide-y">
+              <div className="flex flex-col">
                 {filteredPosts.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">
-                    No articles match your search.
-                  </p>
+                  <div className="text-center py-20 border border-dashed border-gray-200 rounded-3xl">
+                    <p className="text-gray-400 text-lg">No articles found matching your criteria.</p>
+                  </div>
                 ) : (
                   filteredPosts.map((post) => (
                     <ArticleRow key={post.id} post={post} />

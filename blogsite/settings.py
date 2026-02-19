@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-from corsheaders.defaults import default_headers
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -60,12 +59,41 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    # Add your production domain later, e.g., "https://your-site.com"
+]
+
+# This allows cookies/sessions (Required for Smart Counter)
 CORS_ALLOW_CREDENTIALS = True
 
+from corsheaders.defaults import default_headers
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-user-phone',
+    'content-type',
+    'authorization',
 ]
+
+
+# -----------------------------
+# 🍪 SESSION & COOKIE SETTINGS
+# -----------------------------
+
+# 1. Allow cookies via HTTP (Since you don't have HTTPS locally)
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+# 2. Relax SameSite policy (Allows cookies between ports 3000 and 8000)
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# 3. Ensure Session Engine is DB-backed
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# 4. (Optional) Increase cookie age so you don't get logged out quickly
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 Week
 
 
 ROOT_URLCONF = 'blogsite.urls'

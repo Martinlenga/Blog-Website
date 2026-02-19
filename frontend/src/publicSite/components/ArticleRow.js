@@ -1,68 +1,100 @@
 import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
+import { FiClock, FiChevronRight, FiUserCheck } from "react-icons/fi";
+import { useAuth } from "../../auth/PublicAuthContext";
 
 const API_BASE = "http://127.0.0.1:8000";
 
 const ArticleRow = ({ post }) => {
+  const { user } = useAuth();
+
   const imageUrl = post.banner_image
     ? post.banner_image.startsWith("http")
       ? post.banner_image
       : `${API_BASE}${post.banner_image}`
     : placeholder;
 
+  const categoryName = post.category 
+    ? (typeof post.category === 'object' ? post.category.name : post.category) 
+    : "Article";
+
+  const isAuthor = user && (user.name === post.author_name || user.id === post.author);
+
   return (
-    <article className="flex gap-6 py-6 border-b last:border-b-0 items-start">
-      {/* Image */}
-      <div className="w-40 h-28 flex-shrink-0 rounded-lg overflow-hidden">
+    <article className="group flex flex-col md:flex-row gap-6 md:gap-8 py-10 border-b border-gray-100 last:border-0 items-start">
+      
+      {/* IMAGE CONTAINER */}
+      {/* Added 'border border-gray-200' for that slight borderline */}
+      <Link 
+        to={`/post/${post.slug}`} 
+        className="w-full md:w-72 h-56 md:h-48 flex-shrink-0 rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-gray-200 relative transition-all duration-300"
+      >
         <img
           src={imageUrl}
           alt={post.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-      </div>
+      </Link>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col justify-between">
-        {/* Meta */}
-        <div className="flex flex-wrap items-center gap-3 text-xs mb-1">
-          {post.category && (
-            <span className="uppercase tracking-wide text-indigo-600 font-semibold">
-              {post.category}
+      {/* CONTENT SIDE */}
+      <div className="flex-1 flex flex-col h-full justify-center w-full">
+        
+        {/* Header Tags */}
+        <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest mb-2">
+            <span className="text-indigo-600">{categoryName}</span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-400 flex items-center gap-1">
+               <FiClock className="text-indigo-400"/> {post.reading_time || "5 Min"}
             </span>
-          )}
-          {post.author_name && (
-            <span className="text-gray-500">By: {post.author_name}</span>
-          )}
         </div>
 
         {/* Title */}
-        <h3 className="text-lg font-semibold text-gray-900 leading-snug">
-          <Link to={`/post/${post.slug}`} className="hover:no-underline">
+        <h3 className="font-serif text-2xl md:text-3xl font-bold text-gray-900 leading-tight mb-3 group-hover:text-indigo-600 transition-colors">
+          <Link to={`/post/${post.slug}`}>
             {post.title}
           </Link>
         </h3>
 
-        {/* Meta Description */}
-        <p className="text-gray-600 mt-1 line-clamp-2 text-sm">
+        {/* Excerpt */}
+        <p className="text-gray-500 text-base leading-relaxed line-clamp-2 mb-4 max-w-2xl">
           {post.meta_description}
         </p>
 
-        {/* Footer: reading time, price & link */}
-        <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
-          <span>{post.reading_time}</span>
-          <div className="flex items-center gap-4">
-            {post.price && (
-              <span className="text-gray-700 font-semibold">
-                KES {post.price}
-              </span>
-            )}
-            <Link
-              to={`/post/${post.slug}`}
-              className="text-indigo-600 font-medium hover:underline"
-            >
-              Read Article
-            </Link>
-          </div>
+        {/* Footer Info Row */}
+        <div className="flex items-center justify-between mt-1 pt-3 border-t border-gray-50 md:border-none md:pt-0">
+           
+           {/* AUTHOR SECTION */}
+           <div className="flex items-center gap-2">
+             <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">By:</span>
+             <span className="text-sm font-bold text-gray-900">
+               {post.author_name || "JK Team"}
+             </span>
+             {isAuthor && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                   <FiUserCheck /> You
+                </span>
+             )}
+           </div>
+
+           {/* PRICE & ACTION */}
+           <div className="flex items-center gap-4">
+             {post.price ? (
+                <span className="text-gray-900 font-bold text-xs bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                  KES {post.price}
+                </span>
+             ) : (
+                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                  Free
+                </span>
+             )}
+
+             <Link
+               to={`/post/${post.slug}`}
+               className="flex items-center gap-1 text-sm font-bold text-indigo-600 hover:gap-2 transition-all"
+             >
+               Read <FiChevronRight />
+             </Link>
+           </div>
         </div>
       </div>
     </article>

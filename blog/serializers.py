@@ -28,6 +28,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "price",
             "reading_time",
             "meta_description",
+            "views",            # ⭐ NEW: Expose view count
         ]
 
     def get_content_preview(self, obj):
@@ -37,8 +38,9 @@ class PostDetailSerializer(serializers.ModelSerializer):
         return f"{obj.price:.2f}"
 
     def get_reading_time(self, obj):
-        words = len(obj.content.split())
-        minutes = max(1, round(words / 200))
+        # ⭐ OPTIMIZATION: Use the stored DB value instead of recalculating
+        # Fallback to 1 minute if it happens to be 0
+        minutes = obj.reading_time_minutes or 1
         return f"{minutes} min read"
 
 
@@ -54,5 +56,6 @@ class FeedbackSerializer(serializers.ModelSerializer):
             "email",
             "rating",
             "comment",
+            "is_approved", # Helpful if you want to show "Pending Approval" to user
             "created_at",
         ]

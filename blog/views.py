@@ -11,6 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.db.models import F
 
 from google.oauth2 import id_token
 from google.auth.transport import requests
@@ -76,8 +77,11 @@ def google_login(request):
 @permission_classes([AllowAny])
 @authentication_classes([])
 def post_list(request):
-    featured = Post.objects.filter(featured=True).first()
-    posts = Post.objects.filter(featured=False).order_by("-created_at")
+    # Only fetch the featured post if it is published
+    featured = Post.objects.filter(featured=True, is_published=True).first()
+    
+    # Only fetch regular posts if they are published
+    posts = Post.objects.filter(featured=False, is_published=True).order_by("-created_at")
 
     return Response({
         "featured": PostDetailSerializer(featured).data if featured else None,
@@ -89,10 +93,22 @@ def post_list(request):
 # Post detail (requires login)
 # --------------------------
 @api_view(["GET"])
-@permission_classes([])  # 👈 PUBLIC
+@permission_classes([]) 
 @authentication_classes([JWTAuthentication])
 def post_detail_by_slug(request, slug):
     post = get_object_or_404(Post, slug=slug)
+
+    # ⭐ SMART ANALYTICS: Prevent double counting
+    # We use the user's session to track if they've seen this post recently.
+    session_key = f"viewed_post_{post.id}"
+
+    if not request.session.get(session_key, False):
+        # Only increment if they haven't seen it in this session
+        Post.objects.filter(pk=post.pk).update(views=F("views") + 1)
+        post.refresh_from_db()
+        
+        # Mark as viewed in session (expires when browser closes)
+        request.session[session_key] = True
 
     user = request.user
     is_authenticated = user.is_authenticated
@@ -111,20 +127,21 @@ def post_detail_by_slug(request, slug):
             post=post, user=user, status="PENDING"
         ).exists()
 
+    # Admin Override (Admins always see content)
+    if is_authenticated and user.is_staff:
+        has_access = True
+
     locked = not has_access
 
     data["locked"] = locked
     data["pending_payment"] = pending_payment
 
-    # 🚨 CRITICAL: protect full content
     if locked:
         data["content"] = None
     else:
         data["content"] = post.content
 
     return Response(data)
-
-
 
 # --------------------------
 # Unlock post
@@ -185,7 +202,7 @@ def initiate_payment(request, slug):
         res = initiate_stk_push(
             phone_number=phone,
             amount=int(post.price),
-            account_reference=f"POST-{post.id}",
+            account_reference=f"{post.title}",
             transaction_desc=f"Payment for {post.title}",
         )
     except HTTPError as e:
@@ -211,42 +228,45 @@ def initiate_payment(request, slug):
 @permission_classes([AllowAny])
 @authentication_classes([])
 def mpesa_callback(request):
-    payload = json.loads(request.body.decode("utf-8"))
-    stk = payload.get("Body", {}).get("stkCallback", {})
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+        stk = payload.get("Body", {}).get("stkCallback", {})
 
-    checkout_id = stk.get("CheckoutRequestID")
-    if not checkout_id:
-        return JsonResponse({"status": "invalid_callback"})
+        checkout_id = stk.get("CheckoutRequestID")
+        if not checkout_id:
+            return JsonResponse({"status": "invalid_callback"})
 
-    tx = PaymentTransaction.objects.filter(
-        checkout_request_id=checkout_id
-    ).select_related("post", "user").first()
+        tx = PaymentTransaction.objects.filter(
+            checkout_request_id=checkout_id
+        ).select_related("post", "user").first()
 
-    if not tx:
-        return JsonResponse({"status": "not_found"})
+        if not tx:
+            return JsonResponse({"status": "not_found"})
 
-    tx.result_code = stk.get("ResultCode")
-    tx.result_desc = stk.get("ResultDesc")
+        tx.result_code = stk.get("ResultCode")
+        tx.result_desc = stk.get("ResultDesc")
 
-    if tx.result_code != 0:
-        tx.status = "FAILED"
+        if tx.result_code != 0:
+            tx.status = "FAILED"
+            tx.save()
+            return JsonResponse({"status": "failed"})
+
+        metadata = stk.get("CallbackMetadata", {}).get("Item", [])
+        tx.mpesa_receipt = next(
+            (i.get("Value") for i in metadata if i.get("Name") == "MpesaReceiptNumber"),
+            None
+        )
+
+        tx.status = "SUCCESS"
         tx.save()
-        return JsonResponse({"status": "failed"})
 
-    metadata = stk.get("CallbackMetadata", {}).get("Item", [])
-    tx.mpesa_receipt = next(
-        (i.get("Value") for i in metadata if i.get("Name") == "MpesaReceiptNumber"),
-        None
-    )
+        # Grant access
+        PostAccess.objects.get_or_create(post=tx.post, user=tx.user)
 
-    tx.status = "SUCCESS"
-    tx.save()
-
-    # Grant access
-    PostAccess.objects.get_or_create(post=tx.post, user=tx.user)
-
-    return JsonResponse({"status": "success"})
-
+        return JsonResponse({"status": "success"})
+    except Exception as e:
+        print("Callback Error:", e)
+        return JsonResponse({"status": "error"})
 
 # --------------------------
 # Feedback

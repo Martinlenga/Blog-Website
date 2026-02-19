@@ -1,4 +1,5 @@
-const API_BASE = "http://127.0.0.1:8000/api";
+// 🔹 FIX: Use the .env variable, fallback to localhost only if missing
+const API_BASE = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000/api";
 
 /* ===================== HELPERS ===================== */
 const buildHeaders = (jwt = null, extra = {}) => {
@@ -9,8 +10,16 @@ const buildHeaders = (jwt = null, extra = {}) => {
 
 const handleResponse = async (res) => {
   let data = null;
-  try { data = await res.json(); } catch {}
-  if (!res.ok) throw new Error(data?.detail || data?.error || data?.message || "Request failed");
+  try { 
+    const text = await res.text();
+    data = text ? JSON.parse(text) : {};
+  } catch { 
+    data = {}; 
+  }
+  
+  if (!res.ok) {
+    throw new Error(data?.detail || data?.error || data?.message || "Request failed");
+  }
   return data;
 };
 
@@ -18,7 +27,12 @@ const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await fetch(url, { 
+      ...options, 
+      signal: controller.signal,
+      // ⭐ SMART COUNTER FIX: This allows the browser to send/receive the session cookie
+      credentials: "include" 
+    });
   } catch (err) {
     if (err.name === "AbortError") throw new Error("Request timed out");
     throw new Error("Backend unreachable");
@@ -29,10 +43,11 @@ const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
 
 /* ===================== FETCH WITH AUTH + AUTO REFRESH ===================== */
 export const fetchWithAuth = async (url, options = {}, retry = true) => {
-  const jwt = localStorage.getItem("jwt");
+  let jwt = localStorage.getItem("jwt");
   const refresh = localStorage.getItem("refreshToken");
 
-  const res = await fetchWithTimeout(url, {
+  // Initial Request
+  let res = await fetchWithTimeout(url, {
     ...options,
     headers: buildHeaders(jwt, options.headers),
   });
@@ -42,21 +57,28 @@ export const fetchWithAuth = async (url, options = {}, retry = true) => {
     try {
       const refreshRes = await fetchWithTimeout(`${API_BASE}/token/refresh/`, {
         method: "POST",
-        headers: buildHeaders(),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh }),
       });
 
       const refreshData = await handleResponse(refreshRes);
 
+      // Save new token
       localStorage.setItem("jwt", refreshData.access);
+      jwt = refreshData.access; // Update local variable
 
       // Retry original request with new token
-      return fetchWithAuth(url, options, false);
+      return fetchWithTimeout(url, {
+        ...options,
+        headers: buildHeaders(refreshData.access, options.headers),
+      }).then(handleResponse);
+      
     } catch (err) {
       // Refresh failed → hard logout
       localStorage.removeItem("jwt");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
+      // Optional: window.location.reload() to clear state
       throw new Error("Session expired");
     }
   }
@@ -73,9 +95,11 @@ export const googleLogin = async (token) => {
   });
 
   const data = await handleResponse(res);
+  
   localStorage.setItem("jwt", data.access);
   localStorage.setItem("refreshToken", data.refresh);
   localStorage.setItem("user", JSON.stringify(data.user));
+  
   return data;
 };
 
@@ -84,7 +108,6 @@ export const getPosts = async () => fetchWithAuth(`${API_BASE}/posts/`);
 export const getPostBySlug = async (slug) => fetchWithAuth(`${API_BASE}/posts/${slug}/`);
 
 /* ===================== PERSISTENT UNLOCK ===================== */
-// ⚠️ No longer used directly — unlock happens via Mpesa callback
 export const unlockPost = async (slug) => {
   return fetchWithAuth(`${API_BASE}/posts/${slug}/unlock/`, { method: "POST" });
 };
@@ -93,7 +116,7 @@ export const unlockPost = async (slug) => {
 export const initiatePayment = async (slug, phone) => {
   const res = await fetchWithAuth(`${API_BASE}/posts/${slug}/pay/`, {
     method: "POST",
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ phone }), 
   });
 
   if (res?.message === "Payment already in progress") {
@@ -110,7 +133,7 @@ export const initiatePayment = async (slug, phone) => {
 /* ===================== POLL UNLOCK ===================== */
 export const pollPostUnlock = async (slug) => {
   const post = await getPostBySlug(slug);
-  return post; // post.locked === false will be handled in modal
+  return post; 
 };
 
 /* ===================== FEEDBACK ===================== */

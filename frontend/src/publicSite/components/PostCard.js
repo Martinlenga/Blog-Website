@@ -34,7 +34,7 @@ const PostCard = ({ post }) => {
               {post.category}
             </span>
           )}
-          {post.author_name && <span>By {post.author_name}</span>}
+          {post.author_name && <span>By: {post.author_name}</span>}
         </div>
 
         {/* Title */}

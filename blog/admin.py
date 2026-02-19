@@ -20,15 +20,23 @@ class AdminProfileAdmin(admin.ModelAdmin):
 
 
 # =========================
-# POSTS
+# POSTS (Updated with Analytics & Drafts)
 # =========================
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "featured", "price", "created_at")
+    # Added 'is_published', 'views', 'reading_time_minutes' to the list display
+    list_display = ("title", "author", "featured", "is_published", "price", "views", "reading_time_minutes", "created_at")
+    
     prepopulated_fields = {"slug": ("title",)}
-    list_filter = ("featured", "category")
+    
+    # Added 'is_published' filter
+    list_filter = ("featured", "is_published", "category", "created_at")
+    
     search_fields = ("title", "excerpt", "content")
     ordering = ("-created_at",)
+    
+    # Make analytics fields read-only in the admin panel so they aren't manually edited by mistake
+    readonly_fields = ("views", "reading_time_minutes", "created_at", "updated_at")
 
 
 # =========================

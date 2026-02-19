@@ -1,35 +1,23 @@
-// src/admin/pages/Payments/FinancialTrends.jsx
 import { useEffect, useMemo, useState } from "react";
+import { Helmet } from "react-helmet";
 import { getPaymentsAnalytics } from "../../services/adminApi";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  AreaChart,
-  Area,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, BarChart, Bar } from "recharts";
+import { TrendingUp, DollarSign, CreditCard, Users } from "lucide-react";
 
-/* =========================
-   MAIN PAGE
-========================= */
 export default function FinancialTrends() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState("monthly"); // daily | weekly | monthly
-  const [chartData, setChartData] = useState([]);
+  
+  // 1. State for the toggle
+  const [range, setRange] = useState("daily"); // Default to daily
 
-  // fetch analytics on mount
+  // 2. Fetch Data whenever 'range' changes
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const { data } = await getPaymentsAnalytics();
+        // 🔴 FIX: Pass the period to the backend
+        const { data } = await getPaymentsAnalytics({ period: range });
         setAnalytics(data);
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
@@ -37,242 +25,195 @@ export default function FinancialTrends() {
         setLoading(false);
       }
     };
-    fetchAnalytics();
-  }, []);
 
-  // compute top performing post (useMemo always called)
-  const topPost = useMemo(() => {
-    if (!analytics?.revenue_per_post?.length) return null;
-    return [...analytics.revenue_per_post].sort((a, b) => b.revenue - a.revenue)[0];
-  }, [analytics]);
+    fetchData();
+  }, [range]); // <-- Re-run when range changes
 
-  // update chart data when range changes
-  useEffect(() => {
-    if (!analytics) return;
-    // assume analytics.transactions_over_time has keys: daily, weekly, monthly
-    const filtered = analytics.transactions_over_time[range] || analytics.transactions_over_time;
-    setChartData(filtered);
-  }, [range, analytics]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <span className="text-gray-500 text-lg">Loading financial analytics…</span>
-      </div>
-    );
-  }
-
+  if (loading && !analytics) return <div className="p-12 text-center text-gray-400">Loading financial data...</div>;
   if (!analytics) return null;
 
-  const { summary, revenue_per_post, revenue_by_category } = analytics;
-  const {
-    total_revenue,
-    total_transactions,
-    active_users,
-    arpu,
-    success_rate,
-    failed_rate,
-    status_counts,
-  } = summary;
+  const { summary, revenue_per_post, transactions_over_time } = analytics;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-8 py-10 space-y-12">
+    <div className="animate-fade-in-up pb-12 max-w-7xl mx-auto space-y-8">
 
-        {/* ================= HEADER ================= */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-              Financial Intelligence
-            </h1>
-            <p className="mt-2 text-gray-500 max-w-xl">
-              Deep insight into revenue performance, monetization efficiency,
-              and content impact.
-            </p>
-          </div>
-
-          <TimeRangeToggle value={range} onChange={setRange} />
+      <Helmet>
+        <title>Financial Trends | JK Admin</title>
+      </Helmet>
+      
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 pb-6 border-b border-gray-100">
+        <div>
+          <h1 className="font-serif text-3xl font-bold text-gray-900">Financial Intelligence</h1>
+          <p className="text-gray-500 text-sm mt-1">Deep insight into revenue performance.</p>
         </div>
-
-        {/* ================= KPI CARDS ================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <KpiCard title="Total Revenue" value={`Kshs ${total_revenue}`} gradient />
-          <KpiCard title="Transactions" value={total_transactions} />
-          <KpiCard title="Active Users" value={active_users} />
-          <KpiCard title="ARPU" value={`Kshs ${arpu}`} />
+        
+        {/* TIME RANGE TOGGLE */}
+        <div className="bg-gray-100 p-1 rounded-xl inline-flex">
+          {["daily", "weekly", "monthly", "yearly"].map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setRange(opt)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                range === opt 
+                  ? "bg-white text-indigo-600 shadow-sm" 
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* ================= REVENUE TREND ================= */}
-        <Card large title={`Revenue Trend (${range.charAt(0).toUpperCase() + range.slice(1)})`}>
-          <ResponsiveContainer width="100%" height={360}>
-            <AreaChart data={chartData}>
+      {/* KPI STATS (These usually stay global, but backend sends current snapshots) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label="Total Revenue" value={`KES ${summary.total_revenue.toLocaleString()}`} icon={DollarSign} color="emerald" />
+        <StatCard label="Transactions" value={summary.total_transactions.toLocaleString()} icon={CreditCard} color="indigo" />
+        <StatCard label="Active Users" value={summary.active_users.toLocaleString()} icon={Users} color="blue" />
+        <StatCard label="ARPU" value={`KES ${summary.arpu.toFixed(0)}`} icon={TrendingUp} color="amber" sub="Avg per user" />
+      </div>
+
+      {/* MAIN CHART AREA */}
+      <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm relative">
+        {loading && (
+           <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full animate-pulse">Updating...</span>
+           </div>
+        )}
+        
+        <div className="mb-8">
+          <h3 className="font-serif text-xl font-bold text-gray-900">Revenue Growth</h3>
+          <p className="text-sm text-gray-500">
+             Visualizing income: <span className="font-bold text-gray-800 capitalize">{range} View</span>
+          </p>
+        </div>
+        <div className="h-[350px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={transactions_over_time}>
               <defs>
-                <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05} />
+                <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip formatter={(v) => `Kshs ${v}`} />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#16a34a"
-                strokeWidth={3}
-                fill="url(#revGradient)"
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <XAxis 
+                dataKey="date" 
+                axisLine={false} tickLine={false} 
+                tick={{fill: '#9CA3AF', fontSize: 12}} 
+                dy={10} 
+                // Format date based on range for better readability
+                tickFormatter={(val) => {
+                    const d = new Date(val);
+                    if (range === 'yearly') return d.getFullYear();
+                    if (range === 'monthly') return d.toLocaleDateString('en-US', {month:'short'});
+                    return d.toLocaleDateString('en-US', {day:'numeric', month:'short'});
+                }}
               />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} tickFormatter={v => `K${v/1000}k`} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                itemStyle={{ color: '#fff' }}
+                formatter={(val) => `KES ${val.toLocaleString()}`}
+                labelFormatter={(val) => new Date(val).toLocaleDateString()}
+              />
+              <Area type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} fill="url(#trendGradient)" />
             </AreaChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
+      </div>
 
-        {/* ================= BREAKDOWN CARDS ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* TOP POST */}
-          {topPost && (
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-all">
-              <div className="flex items-center justify-between">
-                <span className="uppercase text-xs tracking-widest opacity-80">
-                  Top Performing Post
-                </span>
-                <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">
-                  🏆 Leader
-                </span>
-              </div>
-              <h3 className="mt-6 text-2xl font-bold leading-tight">
-                {topPost.post__title}
-              </h3>
-              <p className="mt-3 text-sm opacity-90">Revenue Generated</p>
-              <p className="text-2xl font-bold mt-1">
-                Kshs {topPost.revenue}
-              </p>
-            </div>
-          )}
-
-          {/* STATUS DONUT */}
-          <Card title="Payment Status">
-            <ResponsiveContainer width="100%" height={260}>
+      {/* SPLIT GRID: Breakdown & Rankings */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* 1. Payment Success Rate (Donut) */}
+        <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="font-serif text-lg font-bold text-gray-900">Payment Health</h3>
+            <p className="text-xs text-gray-500 mt-1">Success vs Failure rates</p>
+          </div>
+          
+          <div className="h-64 relative">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
+                <Pie 
                   data={[
-                    { name: "Success", value: status_counts.SUCCESS || 0, color: "#22c55e" },
-                    { name: "Failed", value: status_counts.FAILED || 0, color: "#ef4444" },
-                    { name: "Pending", value: status_counts.PENDING || 0, color: "#facc15" },
+                    { name: 'Success', value: summary.status_counts.SUCCESS || 0, color: '#10B981' },
+                    { name: 'Failed', value: summary.status_counts.FAILED || 0, color: '#EF4444' },
+                    { name: 'Pending', value: summary.status_counts.PENDING || 0, color: '#F59E0B' },
                   ]}
-                  innerRadius={65}
-                  outerRadius={95}
-                  paddingAngle={4}
-                  dataKey="value"
+                  innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
                 >
-                  <Cell fill="#22c55e" />
-                  <Cell fill="#ef4444" />
-                  <Cell fill="#facc15" />
+                  <Cell fill="#10B981" />
+                  <Cell fill="#EF4444" />
+                  <Cell fill="#F59E0B" />
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-
-            <div className="grid grid-cols-2 gap-4 mt-6 text-sm">
-              <Stat label="Success Rate" value={`${success_rate}%`} accent="text-emerald-600" />
-              <Stat label="Failed Rate" value={`${failed_rate}%`} accent="text-red-500" />
+            {/* Center Stat */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+               <span className="text-3xl font-bold text-gray-900">{summary.success_rate}%</span>
+               <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Success</span>
             </div>
-          </Card>
-
-          {/* CATEGORY BAR */}
-          <Card title="Revenue by Category">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={revenue_by_category} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="post__category" type="category" width={140} />
-                <Tooltip formatter={(v) => `Kshs ${v}`} />
-                <Bar dataKey="revenue" fill="#f59e0b" radius={[6, 6, 6, 6]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
+          </div>
         </div>
 
-        {/* ================= POSTS ================= */}
-        <Card title="Revenue per Post">
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={revenue_per_post} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="post__title" type="category" width={200} />
-              <Tooltip formatter={(v) => `Kshs ${v}`} />
-              <Bar dataKey="revenue" fill="#3b82f6" barSize={18} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+        {/* 2. Top Revenue Generators (Ranked List) */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+          <h3 className="font-serif text-lg font-bold text-gray-900 mb-6">Top Revenue Generators</h3>
+          <div className="space-y-4">
+            {revenue_per_post.slice(0, 5).map((post, idx) => (
+              <div key={idx} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
+                <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold ${idx === 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {idx + 1}
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-indigo-700 transition-colors">
+                    {post.post__title}
+                  </p>
+                  <div className="w-full bg-gray-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div 
+                      className="bg-indigo-500 h-full rounded-full" 
+                      style={{ width: `${(post.revenue / revenue_per_post[0].revenue) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="block text-emerald-600 font-bold text-sm">KES {post.revenue.toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
 
-/* =========================
-   REUSABLE UI
-========================= */
+// Reuse the clean StatCard style
+const StatCard = ({ label, value, icon: Icon, color, sub }) => {
+  const themes = {
+    indigo: "bg-indigo-50 text-indigo-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    blue: "bg-blue-50 text-blue-600",
+    amber: "bg-amber-50 text-amber-600",
+  };
 
-function TimeRangeToggle({ value, onChange }) {
-  const options = ["daily", "weekly", "monthly"];
   return (
-    <div className="inline-flex bg-gray-200/70 p-1 rounded-2xl shadow-inner">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-            value === opt
-              ? "bg-white shadow text-gray-900"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function KpiCard({ title, value, gradient }) {
-  return (
-    <div
-      className={`rounded-2xl p-6 shadow-sm hover:shadow-md transition-all ${
-        gradient
-          ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white"
-          : "bg-white"
-      }`}
-    >
-      <p className={`text-xs uppercase tracking-wide ${gradient ? "opacity-80" : "text-gray-400"}`}>
-        {title}
-      </p>
-      <p className={`mt-3 text-3xl font-extrabold ${gradient ? "" : "text-gray-900"}`}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function Card({ title, children, large }) {
-  return (
-    <div className={`bg-white rounded-3xl shadow-sm p-6 ${large ? "p-8" : ""} hover:shadow-md transition`}>
-      {title && (
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
-          {title}
-        </h2>
-      )}
-      {children}
-    </div>
-  );
-}
-
-function Stat({ label, value, accent }) {
-  return (
-    <div>
-      <p className="text-gray-400 text-xs uppercase tracking-wide">{label}</p>
-      <p className={`text-lg font-bold ${accent}`}>{value}</p>
+    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between h-32 hover:border-gray-300 transition-colors">
+      <div className="flex justify-between items-start">
+        <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">{label}</span>
+        <div className={`p-2 rounded-lg ${themes[color]}`}>
+          <Icon size={18} />
+        </div>
+      </div>
+      <div>
+        <h3 className="font-serif text-3xl font-bold text-gray-900">{value}</h3>
+        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      </div>
     </div>
   );
 }

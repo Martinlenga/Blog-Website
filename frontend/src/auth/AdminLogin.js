@@ -1,126 +1,150 @@
 import { useState } from "react";
-import { adminLogin } from "../admin/services/adminApi";
-import { useNavigate } from "react-router-dom";
-import { User, Lock } from "lucide-react";
+import { Helmet } from "react-helmet";
+import { useAdmin } from "../admin/context/AdminContext";
+import { User, Lock, Loader, ArrowRight, ShieldCheck, LayoutDashboard } from "lucide-react";
 
 export default function AdminLogin() {
-  const navigate = useNavigate();
+  const { login } = useAdmin();
   const [form, setForm] = useState({ username: "", password: "" });
-  const [error, setError] = useState(""); // persistent error
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(""); // clear old error
-
+    setError("");
     try {
-      const res = await adminLogin(form);
-
-      localStorage.setItem("admin_access", res.data.access);
-      localStorage.setItem("admin_refresh", res.data.refresh);
-
-      navigate("/admin/dashboard/overview");
+      await login(form);
     } catch (err) {
-      // Make error persistent
-      const detail =
-        err.response?.data?.detail ||
-        err.message ||
-        "Invalid admin credentials. Please check your inputs.";
-      setError(detail);
-    } finally {
+      setError("Invalid credentials. Please try again.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left Content Section */}
-      <div className="md:w-1/2 bg-blue-50 flex flex-col justify-center p-12">
-        <h1 className="text-4xl font-extrabold text-blue-900 mb-4">
-          Welcome Back, Admin
-        </h1>
-        <p className="text-blue-700 mb-6">
-          Access the dashboard to manage posts, payments, feedbacks, and more.
-          Keep your platform secure and up-to-date.
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] relative overflow-hidden font-sans">
+      
+      <Helmet>
+        <title>Admin Login | JK Ithaguru</title>
+      </Helmet>
 
-        <ul className="list-disc ml-6 space-y-2 text-blue-700">
-          <li>Monitor transactions in real-time</li>
-          <li>Approve or manage user feedback</li>
-          <li>Update your profile and security settings</li>
-          <li>Audit system logs and maintain records</li>
-        </ul>
+      {/* ================= BACKGROUND MAGIC ================= */}
+      {/* 1. Dynamic Moving Gradients (Softer, Lighter) */}
+      <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[100px] animate-float-slow"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-purple-200/40 rounded-full blur-[100px] animate-float-slow delay-2000"></div>
+      
+      {/* 2. Grid Pattern Overlay (Adds Texture) */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
-        <p className="mt-6 text-blue-600 text-sm">
-          Secure your account and ensure all operations are monitored efficiently.
-        </p>
-      </div>
-
-      {/* Right Form Section */}
-      <div className="md:w-1/2 flex items-center justify-center p-12 bg-white">
-        <div className="w-full max-w-md space-y-6">
-          {/* Admin icon */}
-          <div className="flex justify-center mb-6">
-            <User size={56} className="text-gray-700" />
+      {/* ================= LOGIN CONTAINER ================= */}
+      <div className="relative z-10 w-full max-w-5xl bg-white rounded-[2rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.1)] border border-white/50 overflow-hidden flex flex-col md:flex-row mx-4 md:mx-0 min-h-[600px]">
+        
+        {/* LEFT SIDE: Brand & Visuals */}
+        <div className="hidden md:flex w-1/2 bg-slate-900 relative flex-col justify-between p-12 text-white overflow-hidden">
+          {/* Abstract geometric shapes */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full blur-[80px] opacity-20 -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500 rounded-full blur-[80px] opacity-20 -ml-16 -mb-16"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <LayoutDashboard size={18} className="text-white" />
+              </div>
+              <span className="font-bold text-lg tracking-wide">JK ADMIN</span>
+            </div>
           </div>
 
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
-            Admin Login
-          </h2>
+          <div className="relative z-10 space-y-6">
+            <h1 className="text-4xl font-serif font-bold leading-tight">
+              Manage your content <br /> with confidence.
+            </h1>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+              Securely access your dashboard to track analytics, manage payments, and curate articles.
+            </p>
+          </div>
 
-          {/* Persistent Error Box */}
+          <div className="relative z-10 text-xs text-slate-500 font-medium tracking-wider uppercase">
+            © {new Date().getFullYear()} Admin Portal System
+          </div>
+        </div>
+
+        {/* RIGHT SIDE: The Form */}
+        <div className="w-full md:w-1/2 p-10 md:p-16 flex flex-col justify-center bg-white/80 backdrop-blur-sm">
+          
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+            <p className="text-gray-500 text-sm">Please enter your details to sign in.</p>
+          </div>
+
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-800 px-4 py-3 rounded relative mb-4">
-              <strong className="font-bold">Error: </strong>
-              <span className="block sm:inline">{error}</span>
+            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-3 animate-shake">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              {error}
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="relative">
-              <User className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input
-                name="username"
-                placeholder="Username"
-                value={form.username}
-                onChange={handleChange}
-                className="w-full p-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:outline-none transition-all"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 ml-1">Username</label>
+              <div className="relative group transition-all duration-300">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+                </div>
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-gray-400 font-medium"
+                  placeholder="admin"
+                  value={form.username}
+                  onChange={(e) => setForm({...form, username: e.target.value})}
+                />
+              </div>
             </div>
 
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input
-                name="password"
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={handleChange}
-                className="w-full p-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-300 focus:outline-none transition-all"
-                required
-              />
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 ml-1">Password</label>
+              <div className="relative group transition-all duration-300">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+                </div>
+                <input
+                  type="password"
+                  required
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-gray-400 font-medium"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({...form, password: e.target.value})}
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 text-white rounded-xl font-semibold shadow-lg transition-all ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-700 hover:bg-blue-800"
-              }`}
+              className="w-full group relative overflow-hidden bg-gray-900 hover:bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-xl shadow-gray-200/50 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
             >
-              {loading ? "Logging in..." : "Login"}
+              <div className="relative z-10 flex items-center justify-center gap-2">
+                {loading ? (
+                  <>
+                    <Loader className="animate-spin" size={18} />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Access Dashboard</span>
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
+                  </>
+                )}
+              </div>
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-6">
-            &copy; 2026 Your Company. All rights reserved.
-          </p>
+          {/* Secure Badge */}
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-400 font-medium bg-gray-50 py-2 rounded-lg border border-gray-100 w-fit mx-auto px-4">
+            <ShieldCheck size={14} className="text-green-500" />
+            <span>256-bit SSL Secured Connection</span>
+          </div>
+
         </div>
       </div>
     </div>
