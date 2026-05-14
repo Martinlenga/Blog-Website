@@ -33,7 +33,7 @@ const Footer = () => {
             </h4>
             {/* Increased font size to text-base and bold */}
             <div className="flex flex-wrap gap-x-8 gap-y-3 justify-center">
-              {['Home', 'Blog', 'About', 'Contact'].map((item) => (
+              {['Home', 'Contact'].map((item) => (
                 <Link 
                   key={item}
                   to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
@@ -51,15 +51,14 @@ const Footer = () => {
               Connect With Us
             </h4>
             <div className="flex gap-3">
-              {[FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn].map((Icon, index) => (
-                <a 
-                  key={index} 
-                  href="#" 
-                  className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1"
-                >
-                  <Icon size={16} />
-                </a>
-              ))}
+              <a 
+                href="https://web.facebook.com/IthaguruJK/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1"
+              >
+                <FaFacebookF size={16} />
+              </a>
             </div>
           </div>
 

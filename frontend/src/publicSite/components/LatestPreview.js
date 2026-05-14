@@ -21,7 +21,7 @@ const LatestPreview = ({ posts }) => {
           </h2>
         </div>
         <Link 
-          to="/blog" 
+          to="/" 
           className="hidden md:flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
         >
           View Archive <FiArrowRight />

@@ -62,7 +62,7 @@ const Navbar = () => {
 
           {/* DESKTOP MENU */}
           <div className="hidden md:flex items-center gap-8 text-sm font-bold tracking-wide uppercase">
-            {['Home', 'Blog', 'About', 'Contact'].map((item) => (
+            {['Home', 'Contact'].map((item) => (
               <NavLink
                 key={item}
                 to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
@@ -164,7 +164,7 @@ const Navbar = () => {
           
           {/* Navigation Links */}
           <div className="flex flex-col items-center gap-6 mb-8 mt-4">
-            {['Home', 'Blog', 'About', 'Contact'].map((item) => (
+            {['Home', 'Contact'].map((item) => (
               <NavLink
                 key={item}
                 to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}

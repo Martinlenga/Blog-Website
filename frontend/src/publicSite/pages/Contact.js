@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
-import { FiMail, FiTwitter, FiInstagram, FiSend, FiMapPin } from "react-icons/fi";
+import { FiMail, FiSend, FiMapPin } from "react-icons/fi";
+import { FaFacebookF } from "react-icons/fa"; // Added Facebook icon
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
@@ -20,7 +21,6 @@ const Contact = () => {
       return;
     }
 
-    // Simulate API call
     setTimeout(() => {
       setStatus("success");
       setForm({ name: "", email: "", message: "" });
@@ -31,58 +31,37 @@ const Contact = () => {
     <div className="min-h-screen bg-white text-gray-900 pt-28 pb-20">
       <Helmet>
         <title>Contact | JK Ithaguru</title>
-        <meta
-          name="description"
-          content="Contact JK Ithaguru for feedback, collaboration, or inquiries."
-        />
+        <meta name="description" content="Contact JK Ithaguru for feedback, collaboration, or inquiries." />
       </Helmet>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12">
-
-        {/* ================= HEADER ================= */}
         <header className="text-center max-w-3xl mx-auto mb-20">
-          <p className="text-indigo-600 font-bold tracking-widest uppercase text-xs mb-4">
-            Get in Touch
-          </p>
-
-          <h1 className="font-serif text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-            Let’s start a conversation.
-          </h1>
-
+          <p className="text-indigo-600 font-bold tracking-widest uppercase text-xs mb-4">Get in Touch</p>
+          <h1 className="font-serif text-5xl md:text-6xl font-bold text-gray-900 mb-6">Let’s start a conversation.</h1>
           <p className="text-xl text-gray-500 leading-relaxed font-light">
             Questions, ideas, partnerships, or feedback — our inbox is always open.
           </p>
         </header>
 
-        {/* ================= CONTENT GRID ================= */}
         <div className="grid md:grid-cols-12 gap-12 md:gap-20 items-start">
-
-          {/* LEFT SIDE: Info & Context (Span 5) */}
           <div className="md:col-span-5 space-y-12">
-            
-            {/* Intro Text */}
             <div>
-              <h2 className="font-serif text-3xl font-bold text-gray-900 mb-4">
-                We'd love to hear from you
-              </h2>
+              <h2 className="font-serif text-3xl font-bold text-gray-900 mb-4">We'd love to hear from you</h2>
               <p className="text-gray-600 text-lg leading-relaxed">
                 JK Ithaguru is built for readers who value powerful storytelling. 
-                Whether you want to collaborate, publish, or simply say hello, 
-                we read every message.
+                Whether you want to collaborate, publish, or simply say hello, we read every message.
               </p>
             </div>
 
-            {/* Contact Details Cards */}
             <div className="space-y-6">
-              
               <div className="flex items-start gap-4 p-6 rounded-2xl bg-gray-50 border border-gray-100">
                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 shrink-0">
                   <FiMail size={20} />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Email Us</h3>
-                  <a href="mailto:hello@jkithaguru.com" className="text-indigo-600 hover:text-indigo-800 transition-colors font-medium">
-                    hello@jkithaguru.com
+                  <a href="mailto:info@ithaguru.co.ke" className="text-indigo-600 hover:text-indigo-800 transition-colors font-medium">
+                    info@ithaguru.co.ke
                   </a>
                   <p className="text-sm text-gray-500 mt-1">Typical reply time: 24 hours</p>
                 </div>
@@ -95,28 +74,19 @@ const Contact = () => {
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Socials</h3>
                   <div className="flex gap-4 mt-2">
-                     <a href="#" className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition">
-                       <FiTwitter /> Twitter
-                     </a>
-                     <a href="#" className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition">
-                       <FiInstagram /> Instagram
+                     <a href="https://web.facebook.com/IthaguruJK/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition font-medium">
+                       <FaFacebookF /> Facebook
                      </a>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
 
-          {/* RIGHT SIDE: The Form (Span 7) */}
           <div className="md:col-span-7">
             <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl border border-gray-100 relative overflow-hidden">
-              
-              {/* Decorative Background Blob */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-
               <form className="relative z-10 flex flex-col gap-6" onSubmit={handleSubmit}>
-                
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Your Name</label>
@@ -154,7 +124,6 @@ const Contact = () => {
                   />
                 </div>
 
-                {/* Status Messages */}
                 {status === "success" && (
                   <div className="p-4 bg-green-50 text-green-700 rounded-xl text-center font-medium border border-green-100">
                     Message sent successfully! We'll be in touch soon.
@@ -173,23 +142,15 @@ const Contact = () => {
                 >
                   {status === "sending" ? "Sending..." : <>Send Message <FiSend /></>}
                 </button>
-
               </form>
             </div>
           </div>
-
         </div>
 
-        {/* ================= BOTTOM BRAND STATEMENT ================= */}
         <div className="text-center mt-24 max-w-2xl mx-auto border-t border-gray-100 pt-16">
-          <h3 className="font-serif text-2xl font-bold text-gray-900">
-            Built for readers who appreciate depth.
-          </h3>
-          <p className="mt-3 text-gray-500">
-            JK Ithaguru is where premium stories live.
-          </p>
+          <h3 className="font-serif text-2xl font-bold text-gray-900">Built for readers who appreciate depth.</h3>
+          <p className="mt-3 text-gray-500">JK Ithaguru is where premium stories live.</p>
         </div>
-
       </div>
     </div>
   );

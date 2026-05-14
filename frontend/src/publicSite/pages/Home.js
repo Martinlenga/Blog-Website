@@ -57,7 +57,7 @@ const Home = () => {
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 mt-12">
           <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter drop-shadow-lg leading-tight">
-            Think <br className="md:hidden"/> Deeper.
+            Stories that <br className="md:hidden"/> stay with you.
           </h1>
           <p className="mt-4 text-lg md:text-xl font-medium text-white/90 bg-black/30 backdrop-blur-md px-6 py-2 rounded-full border border-white/20">
             Exclusive articles by JK Ithaguru.

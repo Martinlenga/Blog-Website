@@ -1,10 +1,10 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { googleLogin } from "../publicSite/services/api";
 import { useAuth } from "./PublicAuthContext";
 
-// FIX: Added 'elementId' prop to support multiple buttons (mobile + desktop)
 const GoogleLoginButton = ({ elementId = "google-signin-button" }) => {
   const { login } = useAuth();
+  const renderRef = useRef(false); // Prevents re-rendering the button on the same element
 
   const handleCredentialResponse = useCallback(
     async (response) => {
@@ -30,13 +30,16 @@ const GoogleLoginButton = ({ elementId = "google-signin-button" }) => {
   );
 
   const renderGoogleButton = useCallback(() => {
-    if (!window.google?.accounts?.id) return;
+    if (!window.google?.accounts?.id || renderRef.current) return;
 
-    // Initialize only once if possible, or just re-init safely
-    window.google.accounts.id.initialize({
-      client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-    });
+    // 🔹 FIX: Check if already initialized globally to stop the "Multiple Calls" warning
+    if (!window.google_initialized) {
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+        });
+        window.google_initialized = true; // Set a global flag
+    }
 
     const buttonDiv = document.getElementById(elementId);
     if (buttonDiv) {
@@ -47,37 +50,44 @@ const GoogleLoginButton = ({ elementId = "google-signin-button" }) => {
           size: "large",
           type: "standard",
           shape: "pill",
-          width: "100%", // Responsive width
+          width: "250", // 🔹 FIX: Changed from "100%" to a number string
           text: "signin_with",
           logo_alignment: "left"
         }
       );
+      renderRef.current = true;
     }
   }, [elementId, handleCredentialResponse]);
 
   useEffect(() => {
-    // If script is already loaded, render immediately
+    const scriptUrl = "https://accounts.google.com/gsi/client";
+    const existingScript = document.querySelector(`script[src="${scriptUrl}"]`);
+
     if (window.google?.accounts?.id) {
-       renderGoogleButton();
-       return;
+      renderGoogleButton();
+      return;
     }
 
-    // Otherwise, load script
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      renderGoogleButton();
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.src = scriptUrl;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => renderGoogleButton();
+      document.body.appendChild(script);
+    } else {
+      // If script exists but isn't loaded yet
+      existingScript.addEventListener("load", renderGoogleButton);
+    }
+    
+    return () => {
+      renderRef.current = false;
     };
   }, [renderGoogleButton]);
 
   return (
     <div className="w-full flex justify-center">
-      {/* Use the dynamic ID here */}
-      <div id={elementId} className="w-full" />
+      <div id={elementId} className="min-h-[44px]" />
     </div>
   );
 };
