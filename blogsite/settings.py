@@ -64,7 +64,8 @@ MIDDLEWARE = [
 
 # Dynamically registers your authorized domains
 CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", 
+    "https://ithaguru.co.ke",
+    "https://www.ithaguru.co.ke", 
     "http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
 
