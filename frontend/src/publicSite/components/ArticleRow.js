@@ -3,16 +3,23 @@ import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiChevronRight, FiUserCheck } from "react-icons/fi";
 import { useAuth } from "../../auth/PublicAuthContext";
 
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return placeholder;
+  if (imagePath.startsWith("http")) return imagePath;
+
+  // Use the API URL, ensuring no '/api' suffix remains
+  const apiBase = process.env.REACT_APP_API_URL.replace(/\/api\/?$/, "");
+  
+  // Ensure exactly one slash between base and path
+  const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  
+  return `${apiBase}${cleanPath}`;
+};
 
 const ArticleRow = ({ post }) => {
   const { user } = useAuth();
 
-  const imageUrl = post.banner_image
-  ? (post.banner_image.startsWith("http") 
-      ? post.banner_image 
-      : `${process.env.REACT_APP_API_URL.replace('/api', '')}${post.banner_image.startsWith('/') ? '' : '/'}${post.banner_image}`)
-  : placeholder;
-
+  const imageUrl = getImageUrl(post.banner_image);
 
   const categoryName = post.category 
     ? (typeof post.category === 'object' ? post.category.name : post.category) 

@@ -2,6 +2,18 @@ import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiArrowRight, FiUser } from "react-icons/fi";
 
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return placeholder;
+  if (imagePath.startsWith("http")) return imagePath;
+
+  // Use the API URL, ensuring no '/api' suffix remains
+  const apiBase = process.env.REACT_APP_API_URL.replace(/\/api\/?$/, "");
+  
+  // Ensure exactly one slash between base and path
+  const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  
+  return `${apiBase}${cleanPath}`;
+};
 
 const LatestPreview = ({ posts }) => {
   if (!posts || posts.length === 0) return null;
@@ -31,11 +43,7 @@ const LatestPreview = ({ posts }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {posts.map((post) => {
           
-          const imageUrl = post.banner_image
-            ? (post.banner_image.startsWith("http") 
-                ? post.banner_image 
-                : `${process.env.REACT_APP_API_URL.replace('/api', '')}${post.banner_image.startsWith('/') ? '' : '/'}${post.banner_image}`)
-            : placeholder;
+          const imageUrl = getImageUrl(post.banner_image);
             
           const categoryName = post.category 
             ? (typeof post.category === 'object' ? post.category.name : post.category) 
