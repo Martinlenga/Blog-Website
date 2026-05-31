@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from "react";
-// 🔹 FIX: Importing the correct names from your adminApi.js
 import { getAdminProfile, adminLogin, adminLogout } from "../services/adminApi"; 
 import { useNavigate } from "react-router-dom";
 
@@ -14,18 +13,9 @@ export const AdminProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const checkAuthStatus = async () => {
-    const token = localStorage.getItem("admin_access");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
+  const refreshAdmin = async () => {
     try {
-      // 🔹 FIX: Using getAdminProfile() instead of getAdminProfileRequest()
       const { data } = await getAdminProfile();
-      
-      // Map Django fields to UI fields
       setAdmin({
         ...data,
         profileImage: data.profile_picture 
@@ -33,28 +23,31 @@ export const AdminProvider = ({ children }) => {
           : `https://ui-avatars.com/api/?name=${data.username}&background=0D8ABC&color=fff`
       });
     } catch (error) {
-      // Token likely expired/invalid
-      logout(false); 
-    } finally {
-      setLoading(false);
+      console.error("Failed to refresh admin data", error);
     }
   };
 
+  const checkAuthStatus = async () => {
+    const token = localStorage.getItem("admin_access");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    await refreshAdmin();
+    setLoading(false);
+  };
+
   const login = async (credentials) => {
-    // 🔹 FIX: Using adminLogin() instead of adminLoginRequest()
     const { data } = await adminLogin(credentials);
-    
     localStorage.setItem("admin_access", data.access);
     localStorage.setItem("admin_refresh", data.refresh);
-    
-    await checkAuthStatus(); // Fetch profile immediately
+    await refreshAdmin(); 
     navigate("/admin/dashboard/overview");
   };
 
   const logout = async (callApi = true) => {
     if (callApi) {
       const refresh = localStorage.getItem("admin_refresh");
-      // 🔹 FIX: Using adminLogout() instead of adminLogoutRequest()
       if (refresh) await adminLogout(refresh).catch(() => {});
     }
     localStorage.removeItem("admin_access");
@@ -64,7 +57,7 @@ export const AdminProvider = ({ children }) => {
   };
 
   return (
-    <AdminContext.Provider value={{ admin, loading, login, logout, setAdmin }}>
+    <AdminContext.Provider value={{ admin, loading, login, logout, setAdmin, refreshAdmin }}>
       {children}
     </AdminContext.Provider>
   );

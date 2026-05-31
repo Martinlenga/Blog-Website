@@ -70,11 +70,39 @@ const PostDetail = () => {
   const isUnlocked = post && (!post.locked || post.paid) && isLoggedIn;
   const postUrl = `https://ithaguru.co.ke/posts/${slug}`;
 
+  
+
+  // 🔹 FIX: Complete DOM parsing loop for conditional React elements
   useEffect(() => {
+    let parseAttempts = 0;
+    let parseInterval;
+
     if (isUnlocked && fbLoaded && window.FB) {
-      window.FB.XFBML.parse();
+      // Create a recurring polling interval check to catch late-rendered divs
+      parseInterval = setInterval(() => {
+        const commentsDivExists = document.querySelector('.fb-comments');
+        parseAttempts++;
+
+        if (commentsDivExists) {
+          try {
+            window.FB.XFBML.parse();
+          } catch (e) {
+            console.warn("Facebook parser wrapper encountered an active rendering trace:", e);
+          }
+          clearInterval(parseInterval); // Stop scanning once successfully parsed
+        }
+
+        // Safety break out if the container takes too long to paint
+        if (parseAttempts > 20) {
+          clearInterval(parseInterval);
+        }
+      }, 150); // Polls every 150ms to guarantee the div is caught
     }
-  }, [isUnlocked, fbLoaded]);
+
+    return () => {
+      if (parseInterval) clearInterval(parseInterval);
+    };
+  }, [isUnlocked, fbLoaded, slug]);
 
   if (loading) return (
     <div className="min-h-screen pt-32 flex justify-center">

@@ -7,34 +7,32 @@ from .models import Post, PaymentTransaction, Feedback, AdminAuditLog, AdminProf
 # Admin Profile
 # -----------------------------
 class AdminProfileSerializer(serializers.ModelSerializer):
-    # User fields
-    username = serializers.CharField(source="user.username", read_only=False)
-    email = serializers.EmailField(source="user.email", required=False)
-    first_name = serializers.CharField(source="user.first_name", required=False)
-    last_name = serializers.CharField(source="user.last_name", required=False)
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.EmailField(source="user.email", required=False, allow_blank=True)
+    first_name = serializers.CharField(source="user.first_name", required=False, allow_blank=True)
+    last_name = serializers.CharField(source="user.last_name", required=False, allow_blank=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+    # Add this flag field to handle the picture deletion
+    remove_profile_picture = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = AdminProfile
-        fields = [
-            "username",
-            "email",
-            "first_name",
-            "last_name",
-            "bio",
-            "phone",
-            "profile_picture",
-        ]
+        fields = ["username", "email", "first_name", "last_name", "bio", "phone", "profile_picture", "remove_profile_picture"]
 
     def update(self, instance, validated_data):
-        # Extract user data
+        # 1. Handle profile picture removal
+        if validated_data.pop("remove_profile_picture", False):
+            instance.profile_picture = None
+            instance.save()
+            
+        # 2. Update nested user fields
         user_data = validated_data.pop("user", {})
-
         user = instance.user
         for attr, value in user_data.items():
             setattr(user, attr, value)
         user.save()
 
-        # Update AdminProfile fields
         return super().update(instance, validated_data)
 
 

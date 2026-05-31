@@ -17,9 +17,18 @@ API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // 🔹 1. If the request failed on the login endpoint itself, reject IMMEDIATELY.
+    // Do not clear localStorage, do not redirect, do not pass go.
+    if (originalRequest.url.includes("login/")) {
+      return Promise.reject(error);
+    }
+
+    // 🔹 2. Handle token expiration for other authenticated dashboard routes
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem("admin_refresh");
+      
       if (refreshToken) {
         try {
           const { data } = await axios.post(`${API_URL}token/refresh/`, { refresh: refreshToken });
@@ -27,12 +36,17 @@ API.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return API(originalRequest);
         } catch (err) {
+          // Only clear and redirect if token refresh fails on a dashboard subpage
           localStorage.clear();
-          window.location.href = "/admin/login";
+          if (window.location.pathname !== "/admin/login") {
+            window.location.href = "/admin/login";
+          }
         }
       } else {
         localStorage.clear();
-        window.location.href = "/admin/login";
+        if (window.location.pathname !== "/admin/login") {
+          window.location.href = "/admin/login";
+        }
       }
     }
     return Promise.reject(error);

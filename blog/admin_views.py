@@ -48,6 +48,7 @@ from .admin_serializers import (
 
 )
 from .pagination import AdminPagination
+import codecs  
 
 # -------------------------
 # Admin Profile
@@ -62,12 +63,22 @@ class AdminProfileView(APIView):
 
     def put(self, request):
         profile, _ = AdminProfile.objects.get_or_create(user=request.user)
+        
+        # We pass request.data to the serializer
         serializer = AdminProfileSerializer(
             profile, data=request.data, partial=True
         )
+        
         if serializer.is_valid():
+            # 1. This save() calls the .update() method in your Serializer
+            # which we configured to handle image removal and user field updates
             serializer.save()
+            
+            # 2. Returning serializer.data sends the FRESH updated profile
+            # back to React, which allows your handleSave in Profile.js 
+            # to do setProfile(res.data) and update the UI instantly.
             return Response(serializer.data)
+            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -300,31 +311,46 @@ class AdminPaymentViewSet(ModelViewSet):
             queryset = queryset.filter(status=status)
         return queryset
 
-    # ⭐ NEW FEATURE: Export Payments to CSV
+    
+
+    # ⭐ REFIXED FEATURE: Clean & Human-Readable CSV Export (No Encoding Garbage)
     @action(detail=False, methods=["get"])
     def export_csv(self, request):
+        # Change content type explicitly to avoid raw text conversion conflicts
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="payments_export.csv"'
 
-        writer = csv.writer(response)
-        writer.writerow(["Date", "Phone", "Amount", "Status", "Receipt", "Post Title"])
+        # 1. 🌟 THE EXACT MOJIBAKE FIX: Write the byte stream directly as binary raw data
+        # This prevents the raw string from showing up as "Ã¯»¿Da" in Excel
+        response.write(codecs.BOM_UTF8)
 
-        # Respect current filters if possible, or export all
+        writer = csv.writer(response)
+        writer.writerow(["Date", "Phone Number", "Amount (Kshs)", "Payment Status", "M-Pesa Receipt", "Article Title"])
+
         queryset = self.filter_queryset(self.get_queryset())
         
         for tx in queryset:
+            # 1. 🌟 THE DATE LAYOUT FIX: Force Excel to evaluate the timestamp as a text string
+            # This completely stops Excel from changing it to a Date type and throwing #####
+            formatted_date = f'="{tx.created_at.strftime("%Y-%m-%d %H:%M")}"'
+            
+            formatted_phone = f'="{tx.phone}"' if tx.phone else "-"
+            formatted_receipt = f'="{tx.mpesa_receipt}"' if tx.mpesa_receipt else "-"
+
             writer.writerow([
-                tx.created_at.strftime("%Y-%m-%d %H:%M"),
-                tx.phone,
+                formatted_date,  # Uses the forced text string version
+                formatted_phone,
                 tx.amount,
                 tx.status,
-                tx.mpesa_receipt or "-",
+                formatted_receipt,
                 tx.post.title
             ])
         
-        # Log this action
         AdminAuditLog.objects.create(
-            admin=request.user, action="EXPORT", model_name="PaymentTransaction"
+            admin=request.user, 
+            action="EXPORT", 
+            model_name="PaymentTransaction",
+            details={"filters_applied": request.query_params}
         )
         return response
 
