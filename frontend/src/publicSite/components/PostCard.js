@@ -1,15 +1,14 @@
 import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 
-const API_BASE = process.env.REACT_APP_API_URL.replace('/api', '');
 
 const PostCard = ({ post }) => {
   console.log("data:", post)
   const imageUrl = post.banner_image
-    ? post.banner_image.startsWith("http")
-      ? post.banner_image
-      : `${API_BASE}${post.banner_image}`
-    : placeholder;
+  ? (post.banner_image.startsWith("http") 
+      ? post.banner_image 
+      : `${process.env.REACT_APP_API_URL.replace('/api', '')}${post.banner_image.startsWith('/') ? '' : '/'}${post.banner_image}`)
+  : placeholder;
 
   return (
     <div className="relative group h-[280px] rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:border-indigo-400 transition-all duration-300 cursor-pointer">

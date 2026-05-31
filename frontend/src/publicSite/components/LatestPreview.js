@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiArrowRight, FiUser } from "react-icons/fi";
 
-const API_BASE = process.env.REACT_APP_API_URL.replace('/api', '');
 
 const LatestPreview = ({ posts }) => {
   if (!posts || posts.length === 0) return null;
@@ -33,11 +32,11 @@ const LatestPreview = ({ posts }) => {
         {posts.map((post) => {
           
           const imageUrl = post.banner_image
-            ? post.banner_image.startsWith("http")
-              ? post.banner_image
-              : `${API_BASE}${post.banner_image}`
+            ? (post.banner_image.startsWith("http") 
+                ? post.banner_image 
+                : `${process.env.REACT_APP_API_URL.replace('/api', '')}${post.banner_image.startsWith('/') ? '' : '/'}${post.banner_image}`)
             : placeholder;
-
+            
           const categoryName = post.category 
             ? (typeof post.category === 'object' ? post.category.name : post.category) 
             : "Editorial";

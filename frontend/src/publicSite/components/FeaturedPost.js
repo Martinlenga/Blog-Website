@@ -2,16 +2,15 @@ import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiArrowRight } from "react-icons/fi"; 
 
-const API_BASE = process.env.REACT_APP_API_URL.replace('/api', '');
 
 const FeaturedPost = ({ post }) => {
   if (!post) return null;
 
   const imageUrl = post.banner_image
-    ? post.banner_image.startsWith("http")
-      ? post.banner_image
-      : `${API_BASE}${post.banner_image}`
-    : placeholder;
+  ? (post.banner_image.startsWith("http") 
+      ? post.banner_image 
+      : `${process.env.REACT_APP_API_URL.replace('/api', '')}${post.banner_image.startsWith('/') ? '' : '/'}${post.banner_image}`)
+  : placeholder;
 
   // Robust fallback for category (handles if it's an object or a string)
   const categoryName = post.category 
