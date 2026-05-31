@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = process.env.REACT_APP_API_URL.replace('/api', '');
 
 const PostCard = ({ post }) => {
   console.log("data:", post)

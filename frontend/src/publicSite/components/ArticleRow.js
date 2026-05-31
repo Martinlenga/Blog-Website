@@ -3,7 +3,7 @@ import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiChevronRight, FiUserCheck } from "react-icons/fi";
 import { useAuth } from "../../auth/PublicAuthContext";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = process.env.REACT_APP_API_URL.replace('/api', '');
 
 const ArticleRow = ({ post }) => {
   const { user } = useAuth();
