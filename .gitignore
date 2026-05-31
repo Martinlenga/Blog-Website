@@ -1,0 +1,23 @@
+# 🔐 Environment Keys (Never commit these!)
+.env
+.env.production
+.env.local
+.env.development
+
+# 🐍 Django/Python temporary files
+__pycache__/
+*.pyc
+db.sqlite3
+/staticfiles/
+/media/
+
+# ⚛️ React/Node temporary files
+node_modules/
+/build/
+/dist/
+.eslintcache
+npm-debug.log*
+
+# 💻 System files
+.DS_Store
+Thumbs.db
