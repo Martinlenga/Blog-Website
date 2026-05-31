@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiArrowRight } from "react-icons/fi"; 
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = process.env.REACT_APP_API_URL.replace('/api', '');
 
 const FeaturedPost = ({ post }) => {
   if (!post) return null;
