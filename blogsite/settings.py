@@ -76,6 +76,13 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'authorization',
 ]
 
+# Add this so Django trusts your HTTPS domain for POST requests
+CSRF_TRUSTED_ORIGINS = [
+    'https://ithaguru.co.ke', 
+    'https://www.ithaguru.co.ke',
+    'https://api.ithaguru.co.ke'
+]
+
 # ----------------------------------------------------------------------
 # 🍪 COOKIE & SESSION PRIVACY POLICY
 # ----------------------------------------------------------------------
