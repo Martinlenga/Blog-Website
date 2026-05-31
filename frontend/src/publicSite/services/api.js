@@ -1,5 +1,8 @@
 // 🔹 FIX: Use the .env variable, fallback to localhost only if missing
-const API_BASE = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000/api";
+const API_BASE = process.env.REACT_APP_API_URL;
+if (!API_BASE) {
+    console.error("REACT_APP_API_URL is missing! Check your .env file.");
+}
 
 /* ===================== HELPERS ===================== */
 const buildHeaders = (jwt = null, extra = {}) => {
