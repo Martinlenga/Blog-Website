@@ -68,10 +68,10 @@ export default function FinancialTrends() {
 
       {/* KPI STATS (These usually stay global, but backend sends current snapshots) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Total Revenue" value={`KES ${summary.total_revenue.toLocaleString()}`} icon={DollarSign} color="emerald" />
-        <StatCard label="Transactions" value={summary.total_transactions.toLocaleString()} icon={CreditCard} color="indigo" />
+        <StatCard label="Total Revenue" value={`Sh ${Number(summary.total_revenue).toLocaleString()}`} icon={DollarSign} color="emerald"/>
+        <StatCard label="Transactions" value={summary.total_transactions.toLocaleString()} icon={CreditCard} color="indigo"/>
         <StatCard label="Active Users" value={summary.active_users.toLocaleString()} icon={Users} color="blue" />
-        <StatCard label="ARPU" value={`KES ${summary.arpu.toFixed(0)}`} icon={TrendingUp} color="amber" sub="Avg per user" />
+        <StatCard label="ARPU" value={`Sh ${summary.arpu % 1 === 0 ? Number(summary.arpu).toFixed(0) : Number(summary.arpu).toFixed(2)}`} icon={TrendingUp} color="amber" sub="Avg per user"/>
       </div>
 
       {/* MAIN CHART AREA */}
@@ -111,11 +111,11 @@ export default function FinancialTrends() {
                     return d.toLocaleDateString('en-US', {day:'numeric', month:'short'});
                 }}
               />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} tickFormatter={v => `K${v/1000}k`} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} tickFormatter={v => `Kshs ${v/1000}`} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(val) => `KES ${val.toLocaleString()}`}
+                formatter={(val) => `Kshs ${val.toLocaleString()}`}
                 labelFormatter={(val) => new Date(val).toLocaleDateString()}
               />
               <Area type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} fill="url(#trendGradient)" />
@@ -181,7 +181,7 @@ export default function FinancialTrends() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="block text-emerald-600 font-bold text-sm">KES {post.revenue.toLocaleString()}</span>
+                  <span className="block text-emerald-600 font-bold text-sm">Kshs {post.revenue.toLocaleString()}</span>
                 </div>
               </div>
             ))}

@@ -171,7 +171,7 @@ export default function Transactions() {
                     {/* AMOUNT */}
                     <td className="px-6 py-4 text-right">
                       <span className={`text-sm font-extrabold font-serif ${p.status === 'SUCCESS' ? 'text-gray-900' : 'text-gray-400'}`}>
-                        KES {Number(p.amount).toLocaleString()}
+                        Kshs {Number(p.amount).toLocaleString()}
                       </span>
                     </td>
 

@@ -201,7 +201,7 @@ export default function AllPosts() {
                           </span>
                           {Number(post.price) > 0 && (
                             <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 mt-1" title="Price">
-                              KES {Number(post.price).toFixed(0)}
+                              Kshs {Number(post.price).toFixed(0)}
                             </span>
                           )}
                         </div>

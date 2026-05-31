@@ -90,8 +90,8 @@ export default function Overview() {
 
       {/* 2. KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard label="Monthly Revenue" value={`KES ${kpis.this_month_revenue.toLocaleString()}`} trend={kpis.growth} icon={DollarSign} color="emerald" />
-        <StatCard label="Total Reads" value={kpis.total_views?.toLocaleString()} icon={Eye} color="indigo" />
+        <StatCard label="Monthly Revenue" value={`Kshs ${kpis.this_month_revenue.toLocaleString()}`} trend={kpis.growth} icon={DollarSign} color="emerald" />
+        <StatCard label="Total Views" value={kpis.total_views?.toLocaleString()} icon={Eye} color="indigo" />
         <StatCard label="Paying Readers" value={kpis.total_customers} icon={Users} color="blue" />
         <StatCard label="Conversion" value={`${conversionRate}%`} icon={ArrowUpRight} color="amber" />
       </div>
@@ -118,10 +118,10 @@ export default function Overview() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12, fontWeight: 500}} dy={15} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12, fontWeight: 500}} tickFormatter={(val) => `K${val/1000}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12, fontWeight: 500}} tickFormatter={(val) => `Kshs ${val/1000}`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                  formatter={(val) => `KES ${val.toLocaleString()}`}
+                  formatter={(val) => `Kshs ${val.toLocaleString()}`}
                   itemStyle={{ color: '#fff' }}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={3} fill="url(#colorGradient)" />
@@ -145,7 +145,7 @@ export default function Overview() {
                   </p>
                   <div className="flex items-center gap-3 mt-2 text-xs font-medium text-gray-500">
                     <span className="flex items-center gap-1"><Eye size={20}/> {post.views.toLocaleString()}</span>
-                    <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded"><DollarSign size={12}/> {post.revenue.toLocaleString()}</span>
+                    <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Kshs {post.revenue.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -219,7 +219,7 @@ export default function Overview() {
                   <div className="text-right">
                     <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Price</span>
                     <span className="text-xl font-extrabold text-emerald-600 font-serif">
-                      KES {Number(featured_post.price).toLocaleString()}
+                      Kshs {Number(featured_post.price).toLocaleString()}
                     </span>
                   </div>
                 </div>

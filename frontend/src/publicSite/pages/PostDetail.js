@@ -68,7 +68,7 @@ const PostDetail = () => {
   };
 
   const isUnlocked = post && (!post.locked || post.paid) && isLoggedIn;
-  const postUrl = `https://jkithaguru.com/posts/${slug}`;
+  const postUrl = `https://ithaguru.co.ke/posts/${slug}`;
 
   useEffect(() => {
     if (isUnlocked && fbLoaded && window.FB) {

@@ -113,8 +113,6 @@ def post_detail_by_slug(request, slug):
     user = request.user
     is_authenticated = user.is_authenticated
 
-    print("📌 Request user:", user, "Authenticated:", is_authenticated)
-
     serializer = PostDetailSerializer(post)
     data = serializer.data
 
@@ -151,7 +149,6 @@ def post_detail_by_slug(request, slug):
 @authentication_classes([JWTAuthentication])
 def unlock_post(request, slug):
     post = get_object_or_404(Post, slug=slug)
-    print("🔓 Unlock request by user:", request.user)
 
     PostAccess.objects.get_or_create(user=request.user, post=post)
 
@@ -199,11 +196,22 @@ def initiate_payment(request, slug):
     )
 
     try:
+        # 1. Grab the first two words of the title
+        title_words = post.title.split()
+        if len(title_words) >= 2:
+            # Join them with an underscore (e.g., "Think_Deeper")
+            formatted_ref = f"{title_words[0].capitalize()}_{title_words[1].capitalize()}"
+        else:
+            formatted_ref = f"{post.title.capitalize()}"
+
+        # 2. Force it to be strictly 12 characters or less so Safaricom doesn't reject it
+        clean_reference = formatted_ref[:12].rstrip("_")
+
         res = initiate_stk_push(
             phone_number=phone,
             amount=int(post.price),
-            account_reference=f"{post.title}",
-            transaction_desc=f"Payment for {post.title}",
+            account_reference=clean_reference,
+            transaction_desc=f"Unlock {post.slug[:15]}",
         )
     except HTTPError as e:
         tx.status = "FAILED"

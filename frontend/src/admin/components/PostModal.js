@@ -234,7 +234,7 @@ export default function PostModal({ open, post, onClose, refresh }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Price (KES)</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Price (Kshs)</label>
                   <input
                     type="number" name="price" value={formData.price} onChange={handleChange}
                     className="w-full px-3 py-2 text-sm border-b border-gray-200 focus:border-indigo-600 outline-none bg-transparent font-mono font-bold text-emerald-700"

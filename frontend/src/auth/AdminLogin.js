@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet";
 import { useAdmin } from "../admin/context/AdminContext";
 import { User, Lock, Loader, ArrowRight, ShieldCheck, LayoutDashboard } from "lucide-react";
@@ -8,18 +8,54 @@ export default function AdminLogin() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const errorTimeoutRef = useRef(null); // Prevents state updates from clashing on repeated clicks
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError(""); // Clear previous errors cleanly
+
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+
     try {
       await login(form);
     } catch (err) {
-      setError("Invalid credentials. Please try again.");
+      // 🔹 THE BULLETPROOF SAFETY CHECK:
+      // Fallback cleanly to a standard message if the server's error format changes
+      let errorMessage = "Invalid credentials. Please try again.";
+
+      if (err.response && err.response.data) {
+        // If your backend passes an explicit error object, extract it safely
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (err.response.data.detail) {
+          errorMessage = err.response.data.detail;
+        } else if (err.response.data.error) {
+          errorMessage = err.response.data.error;
+        }
+      } else if (err.message) {
+        // Handle network timeouts or offline errors
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+
+      setError(errorMessage);
       setLoading(false);
+
+      // Keep the error visible for 6 seconds
+      errorTimeoutRef.current = setTimeout(() => {
+        setError("");
+      }, 6000);
     }
   };
+
+  // Safe memory cleanup if the admin successfully logs in or leaves the page
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] relative overflow-hidden font-sans">
@@ -28,20 +64,16 @@ export default function AdminLogin() {
         <title>Admin Login | JK Ithaguru</title>
       </Helmet>
 
-      {/* ================= BACKGROUND MAGIC ================= */}
-      {/* 1. Dynamic Moving Gradients (Softer, Lighter) */}
+      {/* BACKGROUND MAGIC */}
       <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[100px] animate-float-slow"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-purple-200/40 rounded-full blur-[100px] animate-float-slow delay-2000"></div>
-      
-      {/* 2. Grid Pattern Overlay (Adds Texture) */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
-      {/* ================= LOGIN CONTAINER ================= */}
+      {/* LOGIN CONTAINER */}
       <div className="relative z-10 w-full max-w-5xl bg-white rounded-[2rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.1)] border border-white/50 overflow-hidden flex flex-col md:flex-row mx-4 md:mx-0 min-h-[600px]">
         
         {/* LEFT SIDE: Brand & Visuals */}
         <div className="hidden md:flex w-1/2 bg-slate-900 relative flex-col justify-between p-12 text-white overflow-hidden">
-          {/* Abstract geometric shapes */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full blur-[80px] opacity-20 -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500 rounded-full blur-[80px] opacity-20 -ml-16 -mb-16"></div>
           
@@ -76,12 +108,13 @@ export default function AdminLogin() {
             <p className="text-gray-500 text-sm">Please enter your details to sign in.</p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-3 animate-shake">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              {error}
+          {/* 🔹 SMOOTH CSS HEIGHT TRANSITION CONTAINER */}
+          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${error ? "max-h-24 opacity-100 mb-6" : "max-h-0 opacity-0 mb-0"}`}>
+            <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-3">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="font-medium">{error}</span>
             </div>
-          )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
