@@ -60,7 +60,7 @@ export const getDashboardStats = () => API.get("dashboard/");
 export const getAdminPosts = (params) => API.get("posts/", { params });
 export const getAdminPostBySlug = (slug) => API.get(`posts/${slug}/`);
 export const createAdminPost = (data) => API.post("posts/", data);
-export const updateAdminPost = (slug, data) => API.put(`posts/${slug}/`, data);
+export const updateAdminPost = (slug, data) => API.patch(`posts/${slug}/`, data);
 export const deleteAdminPost = (slug) => API.delete(`posts/${slug}/`);
 export const bulkFeaturePosts = (slugs) => API.post("posts/bulk_feature/", { slugs });
 export const getCategories = () => API.get("posts/categories/");

@@ -81,13 +81,17 @@ export default function PostModal({ open, post, onClose, refresh }) {
     
     // 1. Append all text fields
     Object.keys(formData).forEach((key) => {
-      const value = formData[key];
-      payload.append(key, typeof value === "boolean" ? (value ? "true" : "false") : value);
+      // CRITICAL: Skip the banner_image field here so we don't send 
+      // an empty or old value that conflicts with the file upload
+      if (key !== 'banner_image') {
+        const value = formData[key];
+        payload.append(key, typeof value === "boolean" ? (value ? "true" : "false") : value);
+      }
     });
 
-    // 2. Append the banner file ONLY if it's a file object
-    if (banner instanceof File) {
-      // 3-argument version: (key, file_object, filename)
+    // 2. Append the banner file ONLY if it's a valid File object
+    // The 3rd argument (banner.name) is REQUIRED to provide the filename and extension to Django
+    if (banner instanceof File && banner.size > 0) {
       payload.append("banner_image", banner, banner.name);
     }
 
@@ -107,7 +111,9 @@ export default function PostModal({ open, post, onClose, refresh }) {
       }, 1500);
     } catch (err) {
       console.error("Submission Error:", err.response?.data);
+      // Detailed error logging to help you see exactly which field failed
       setErrors(err.response?.data || { general: "Failed to save article" });
+      alert("Error: " + JSON.stringify(err.response?.data));
     } finally {
       setLoading(false);
     }

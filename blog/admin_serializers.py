@@ -84,8 +84,10 @@ class AdminPostSerializer(serializers.ModelSerializer):
         read_only_fields = ["author", "slug", "created_at", "updated_at", "views", "reading_time_minutes", "conversion_rate"]
 
     def update(self, instance, validated_data):
-        # If no new image is provided in the FormData, validated_data.get('banner_image') 
-        # might be missing. Django will keep the existing instance value.
+        # Prevent "empty" file objects from overwriting existing images
+        if 'banner_image' in validated_data and not validated_data['banner_image']:
+            validated_data.pop('banner_image')
+            
         return super().update(instance, validated_data)
 
     def get_conversion_rate(self, obj):

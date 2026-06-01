@@ -23,9 +23,14 @@ export default function Profile() {
     if (!url) return `https://ui-avatars.com/api/?name=${profile.username || 'Admin'}&background=4f46e5&color=fff`;
     if (url.startsWith("http")) return url;
     
-    // Just return the path directly. 
-    // If the path is /media/admin_profiles/..., it will work if Nginx is configured right.
-    return url.startsWith('/') ? url : `/${url}`;
+    // Ensure path starts with a single slash
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    
+    // If the full API URL is already present in the path, just return it
+    const apiBase = process.env.REACT_APP_API_URL?.replace('/api', '') || "";
+    if (url.includes(apiBase)) return url;
+    
+    return `${apiBase}${cleanPath}`;
   };
 
   useEffect(() => {
@@ -63,34 +68,30 @@ export default function Profile() {
     setSaving(true);
     const formData = new FormData();
     
-    // Append text fields
     formData.append("first_name", profile.first_name || "");
     formData.append("last_name", profile.last_name || "");
     formData.append("email", profile.email || "");
     formData.append("bio", profile.bio || "");
     formData.append("phone", profile.phone || "");
 
-    // 1. Handle Picture Removal
     if (removePicture) {
         formData.append("remove_profile_picture", "true");
-    } 
-    // 2. Handle New File Upload
-    else if (profile.profile_picture instanceof File) {
-        formData.append("profile_picture", profile.profile_picture);
+    } else if (profile.profile_picture instanceof File) {
+        // FIX: Add the 3rd argument (filename) to prevent 400 Bad Request
+        formData.append("profile_picture", profile.profile_picture, profile.profile_picture.name);
     }
-    // Note: If profile.profile_picture is a string (URL), DO NOT append it,
-    // otherwise Django might try to save the URL string into an ImageField.
 
     try {
       const res = await updateAdminProfile(formData);
       setProfile(res.data);
-      setPreviewImage(getImageUrl(res.data.profile_picture));
+      // Cache-bust by appending timestamp
+      setPreviewImage(`${getImageUrl(res.data.profile_picture)}?t=${Date.now()}`);
       await refreshAdmin();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
     } catch (err) {
       console.error("Profile Update Error:", err.response?.data);
-      alert("Failed to update profile: " + JSON.stringify(err.response?.data || "Check console"));
+      alert("Error: " + JSON.stringify(err.response?.data || "Check console"));
     } finally {
       setSaving(false);
     }
