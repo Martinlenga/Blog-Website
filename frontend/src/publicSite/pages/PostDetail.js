@@ -117,11 +117,30 @@ const PostDetail = () => {
     <div className="min-h-screen pt-32 text-center px-4">
       <h2 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h2>
       <p className="text-red-500 mb-6">{error}</p>
-      <Link to="/blog" className="text-indigo-600 font-bold hover:underline">Return to Blog</Link>
+      <Link to="/" className="text-indigo-600 font-bold hover:underline">
+        Return Home
+      </Link>
     </div>
   );
 
-  if (!post) return <p className="text-center mt-32">Post not found</p>;
+  if (!post) {
+    return (
+      <div className="min-h-screen pt-32 text-center px-4">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Article not found
+        </h2>
+        <p className="text-gray-500 mb-6">
+          The article you're looking for doesn't exist or may have been removed.
+        </p>
+        <Link
+          to="/"
+          className="text-indigo-600 font-bold hover:underline"
+        >
+          Return Home
+        </Link>
+      </div>
+    );
+  }
 
   return (
     // 🔴 Increased pb-20 to pb-32 so the footer content isn't covered by the floating pill
