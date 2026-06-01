@@ -60,34 +60,34 @@ export default function Profile() {
     setSaving(true);
     const formData = new FormData();
     
-    formData.append("username", profile.username || "");
+    // Append text fields
     formData.append("first_name", profile.first_name || "");
     formData.append("last_name", profile.last_name || "");
     formData.append("email", profile.email || "");
     formData.append("bio", profile.bio || "");
     formData.append("phone", profile.phone || "");
 
+    // 1. Handle Picture Removal
     if (removePicture) {
         formData.append("remove_profile_picture", "true");
-    } else if (profile.profile_picture instanceof File) {
+    } 
+    // 2. Handle New File Upload
+    else if (profile.profile_picture instanceof File) {
         formData.append("profile_picture", profile.profile_picture);
     }
+    // Note: If profile.profile_picture is a string (URL), DO NOT append it,
+    // otherwise Django might try to save the URL string into an ImageField.
 
     try {
       const res = await updateAdminProfile(formData);
-      
-      // Update local state and preview immediately
       setProfile(res.data);
       setPreviewImage(getImageUrl(res.data.profile_picture));
-      
-      // Update Context (Topbar)
       await refreshAdmin();
-      
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
     } catch (err) {
-      console.error(err);
-      alert("Failed to update profile.");
+      console.error("Profile Update Error:", err.response?.data);
+      alert("Failed to update profile: " + JSON.stringify(err.response?.data || "Check console"));
     } finally {
       setSaving(false);
     }

@@ -72,25 +72,38 @@ export default function PostModal({ open, post, onClose, refresh }) {
     setLoading(true);
 
     const payload = new FormData();
+    
+    // Append all text fields
     Object.keys(formData).forEach((key) => {
-      payload.append(key, typeof formData[key] === "boolean" ? (formData[key] ? "true" : "false") : formData[key]);
+      // Boolean values need to be strings "true"/"false" for Django
+      const value = typeof formData[key] === "boolean" ? (formData[key] ? "true" : "false") : formData[key];
+      payload.append(key, value);
     });
-    if (banner) payload.append("banner_image", banner);
+
+    // ONLY append the banner if a new file was actually selected
+    if (banner) {
+      payload.append("banner_image", banner);
+    }
 
     try {
-      if (post) await updateAdminPost(post.slug, payload);
-      else await createAdminPost(payload);
+      // IMPORTANT: Do not pass any 'headers' object here. 
+      // Axios will detect the FormData and set the Content-Type automatically.
+      if (post) {
+        await updateAdminPost(post.slug, payload);
+      } else {
+        await createAdminPost(payload);
+      }
       
-      // Success flow
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         refresh();
         onClose();
-        navigate("/admin/posts"); // Redirect to post list
+        navigate("/admin/posts");
       }, 1500);
     } catch (err) {
-      setErrors(err.response?.data || {});
+      console.error("Submission Error:", err.response?.data);
+      setErrors(err.response?.data || { general: "Failed to save article" });
     } finally {
       setLoading(false);
     }

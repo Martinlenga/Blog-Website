@@ -63,6 +63,7 @@ class AdminProfileView(APIView):
 
     def put(self, request):
         profile, _ = AdminProfile.objects.get_or_create(user=request.user)
+        print("Incoming Data:", request.data)
         serializer = AdminProfileSerializer(profile, data=request.data, partial=True)
         
         if serializer.is_valid():

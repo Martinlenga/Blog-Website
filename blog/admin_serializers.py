@@ -15,6 +15,7 @@ class AdminProfileSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required=False, allow_blank=True)
     # Add this flag field to handle the picture deletion
     remove_profile_picture = serializers.BooleanField(write_only=True, required=False)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = AdminProfile
@@ -24,15 +25,18 @@ class AdminProfileSerializer(serializers.ModelSerializer):
         # 1. Handle profile picture removal
         if validated_data.pop("remove_profile_picture", False):
             instance.profile_picture = None
-            instance.save()
-            
-        # 2. Update nested user fields
-        user_data = validated_data.pop("user", {})
+        
+        # 2. Extract nested fields (email, first_name, last_name)
+        # These were mapped using source="user.email" etc.
         user = instance.user
-        for attr, value in user_data.items():
-            setattr(user, attr, value)
+        user_fields = ["email", "first_name", "last_name"]
+        
+        for field in user_fields:
+            if field in validated_data:
+                setattr(user, field, validated_data.pop(field))
         user.save()
 
+        # 3. Update the rest of the AdminProfile fields
         return super().update(instance, validated_data)
 
 
@@ -68,27 +72,21 @@ class AdminPasswordResetSerializer(serializers.Serializer):
 # Posts
 # -----------------------------
 class AdminPostSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field="username"
-    )
-    
-    # Computed field for conversion rate
+    author = serializers.SlugRelatedField(read_only=True, slug_field="username")
     conversion_rate = serializers.SerializerMethodField()
+    
+    # Explicitly allow banner_image to be a file upload
+    banner_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Post
-        fields = [
-            "id", "title", "slug", "excerpt", "content", "author", 
-            "banner_image", "category", "featured", "is_published",
-            "price", "meta_description", "views", "reading_time_minutes",
-            "conversion_rate", "created_at", "updated_at"
-        ]
+        fields = "__all__"
         read_only_fields = ["author", "slug", "created_at", "updated_at", "views", "reading_time_minutes", "conversion_rate"]
 
-    def create(self, validated_data):
-        validated_data["author"] = self.context["request"].user
-        return super().create(validated_data)
+    def update(self, instance, validated_data):
+        # If no new image is provided in the FormData, validated_data.get('banner_image') 
+        # might be missing. Django will keep the existing instance value.
+        return super().update(instance, validated_data)
 
     def get_conversion_rate(self, obj):
         # Prevent division by zero

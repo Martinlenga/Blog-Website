@@ -59,8 +59,8 @@ export const adminLogout = (refresh) => API.post("logout/", { refresh }); // Ren
 export const getDashboardStats = () => API.get("dashboard/");
 export const getAdminPosts = (params) => API.get("posts/", { params });
 export const getAdminPostBySlug = (slug) => API.get(`posts/${slug}/`);
-export const createAdminPost = (data) => API.post("posts/", data, { headers: { "Content-Type": "multipart/form-data" } });
-export const updateAdminPost = (slug, data) => API.put(`posts/${slug}/`, data, { headers: { "Content-Type": "multipart/form-data" } });
+export const createAdminPost = (data) => API.post("posts/", data);
+export const updateAdminPost = (slug, data) => API.put(`posts/${slug}/`, data);
 export const deleteAdminPost = (slug) => API.delete(`posts/${slug}/`);
 export const bulkFeaturePosts = (slugs) => API.post("posts/bulk_feature/", { slugs });
 export const getCategories = () => API.get("posts/categories/");
@@ -87,7 +87,7 @@ export const getAdminAuditLogs = (params) => API.get("audit-logs/", { params });
 
 // Profile & Password (RENAMED HERE TO FIX YOUR ERROR)
 export const getAdminProfile = () => API.get("profile/"); 
-export const updateAdminProfile = (data) => API.put("profile/", data, { headers: { "Content-Type": "multipart/form-data" } });
+export const updateAdminProfile = (data) => API.put("profile/", data);
 export const changeAdminPassword = (data) => API.post("change-password/", data);
 export const requestAdminPasswordReset = (email) => API.post("password-reset-request/", { email });
 export const resetAdminPassword = (data) => API.post("password-reset/", data);
