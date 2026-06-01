@@ -50,23 +50,26 @@ const Navbar = () => {
           </Link>
 
           <div className="flex items-center gap-4 relative">
+            {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center gap-8 font-bold uppercase text-xs">
               <NavLink to="/">Home</NavLink>
               <NavLink to="/contact">Contact</NavLink>
             </div>
 
+            {/* Always visible Sign In Button (for both Desktop & Mobile) */}
             {!isLoggedIn && (
-              <div className="hidden md:block"><GoogleLoginButton elementId="google-desktop" /></div>
+              <div className="block">
+                <GoogleLoginButton elementId="google-nav" />
+              </div>
             )}
 
+            {/* Profile Dropdown (Only when logged in) */}
             {isLoggedIn && (
               <div className="relative" ref={profileRef}>
                 <button onClick={() => setProfileOpen(!profileOpen)} className="w-9 h-9 rounded-full bg-gray-200 border border-gray-300 overflow-hidden flex items-center justify-center hover:ring-2 ring-indigo-500 transition-all">
                   {user?.picture ? <img src={user.picture} alt="P" className="w-full h-full object-cover" /> : <FiUser className="text-xl" />}
                 </button>
                 
-                {/* PROFILE DROPDOWN (Now includes Logout) */}
-                {/* PROFILE DROPDOWN (Updated with "Signed in as" and red logout) */}
                 {profileOpen && (
                   <div className="absolute right-0 top-full mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 z-50">
                     <div className="text-center mb-4">
@@ -85,6 +88,7 @@ const Navbar = () => {
               </div>
             )}
 
+            {/* Hamburger Menu Trigger */}
             <button onClick={() => setMenuOpen(!menuOpen)} className="block md:hidden text-2xl z-50">
               {menuOpen ? <FiX /> : <FiMenu />}
             </button>
@@ -92,7 +96,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* MOBILE SIDE DRAWER (Logout removed from here) */}
+      {/* MOBILE SIDE DRAWER */}
       <div className={`fixed top-0 right-0 h-full w-72 bg-white z-50 shadow-2xl transition-transform duration-300 ease-out border-l border-gray-100 ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-6 flex flex-col h-full">
           <div className="flex justify-between items-center mb-10">
@@ -102,7 +106,6 @@ const Navbar = () => {
           <div className="flex flex-col gap-6 text-xl font-bold">
             <NavLink to="/" onClick={closeAll}>Home</NavLink>
             <NavLink to="/contact" onClick={closeAll}>Contact</NavLink>
-            {!isLoggedIn && <GoogleLoginButton elementId="google-mobile" />}
           </div>
         </div>
       </div>
