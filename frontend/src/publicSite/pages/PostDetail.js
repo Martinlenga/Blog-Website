@@ -237,7 +237,13 @@ const PostDetail = () => {
                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                  <span className="w-1 h-6 bg-indigo-600 rounded-full"></span> Discussion
                </h3>
-               <div className="fb-comments" data-href={postUrl} data-width="100%" data-numposts="5"></div>
+               <div 
+                key={postUrl} 
+                className="fb-comments" 
+                data-href={postUrl} 
+                data-width="100%" 
+                data-numposts="5">
+                </div>
             </div>
           </div>
         )}

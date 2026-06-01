@@ -84,7 +84,7 @@ export default function Overview() {
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Income trends over the last 12 months</p>
           </div>
           {/* Responsive container heights for stable mobile rendering */}
-          <div className="h-[250px] sm:h-[320px] w-full">
+          <div className="h-[250px] sm:h-[320px] min-h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenue_trend} margin={{ left: -15, right: 5, top: 10 }}>
                 <defs>
@@ -219,7 +219,7 @@ export default function Overview() {
              </div>
           </div>
           
-          <div className="h-44 w-full">
+          <div className="w-full h-44 min-h-[176px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenue_trend} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />

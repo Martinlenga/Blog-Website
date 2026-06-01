@@ -92,7 +92,7 @@ export default function FinancialTrends() {
           </p>
         </div>
 
-        <div className="h-[250px] sm:h-[350px] w-full">
+        <div className="h-[250px] sm:h-[350px] min-h-[250px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={transactions_over_time} margin={{ left: -15, right: 5, top: 10 }}>
               <defs>
@@ -143,7 +143,7 @@ export default function FinancialTrends() {
             <p className="text-xs text-gray-500 mt-0.5">Success vs Failure ledger parameters</p>
           </div>
           
-          <div className="h-60 relative mt-4 sm:mt-0">
+          <div className="h-60 min-h-[240px] relative mt-4 sm:mt-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie 

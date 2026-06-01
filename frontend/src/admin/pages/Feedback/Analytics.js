@@ -72,7 +72,7 @@ export default function FeedbackAnalytics() {
           <p className="text-indigo-300 text-xs mt-2 font-medium">Positive interactions</p>
         </div>
         
-        <div className="h-20 w-20 relative z-10 shrink-0 ml-4">
+        <div className="h-20 w-20 min-h-[80px] min-w-[80px] relative z-10 shrink-0 ml-4">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie 
@@ -142,7 +142,7 @@ export default function FeedbackAnalytics() {
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Volume metrics broken down by individual ratings</p>
           </div>
           
-          <div className="h-[250px] sm:h-[280px] w-full">
+          <div className="h-[250px] sm:h-[320px] min-h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rating_distribution} layout="vertical" margin={{ left: -10, right: 15 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />

@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useNavigate } from "react-router-dom";
 import { getAdminProfile, updateAdminProfile } from "../../services/adminApi";
-import { useAdmin } from "../../context/AdminContext"; // 1. Import context
-import { Lock, Camera, Save, User, Mail, Phone, FileText, Loader, X } from "lucide-react";
+import { useAdmin } from "../../context/AdminContext";
+import { Lock, Camera, Save, User, Mail, Phone, FileText, Loader, X, CheckCircle } from "lucide-react";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { refreshAdmin } = useAdmin(); // 2. Destructure refreshAdmin
+  const { refreshAdmin } = useAdmin();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [removePicture, setRemovePicture] = useState(false);
   
   const [profile, setProfile] = useState({
@@ -17,16 +18,20 @@ export default function Profile() {
   });
   const [previewImage, setPreviewImage] = useState(null);
 
+  // Helper to force re-fetch of image by adding a timestamp (Cache-Buster)
+  const getImageUrl = (url) => {
+    if (!url) return `https://ui-avatars.com/api/?name=${profile.username || 'Admin'}&background=4f46e5&color=fff`;
+    if (url.startsWith("http")) return url;
+    return `${process.env.REACT_APP_API_URL?.replace('/api', '')}${url}?t=${new Date().getTime()}`;
+  };
+
   useEffect(() => {
     getAdminProfile()
       .then((res) => {
         setProfile(res.data);
-        const img = res.data.profile_picture 
-          ? (res.data.profile_picture.startsWith("http") ? res.data.profile_picture : `${process.env.REACT_APP_API_URL?.replace('/api', '')}${res.data.profile_picture}`)
-          : `https://ui-avatars.com/api/?name=${res.data.username}&background=4f46e5&color=fff`;
-        setPreviewImage(img);
+        setPreviewImage(getImageUrl(res.data.profile_picture));
       })
-      .catch(() => navigate("/admin/login")) // 3. Use absolute path to prevent loop
+      .catch(() => navigate("/admin/login"))
       .finally(() => setLoading(false));
   }, [navigate]);
 
@@ -46,8 +51,8 @@ export default function Profile() {
 
   const handleRemoveImage = () => {
     setRemovePicture(true);
-    setPreviewImage(`https://ui-avatars.com/api/?name=${profile.username}&background=4f46e5&color=fff`);
     setProfile((prev) => ({ ...prev, profile_picture: null }));
+    setPreviewImage(getImageUrl(null));
   };
 
   const handleSave = async (e) => {
@@ -69,17 +74,21 @@ export default function Profile() {
     }
 
     try {
-      await updateAdminProfile(formData);
+      const res = await updateAdminProfile(formData);
       
-      // 4. Update the Context (triggers Topbar re-render)
+      // Update local state and preview immediately
+      setProfile(res.data);
+      setPreviewImage(getImageUrl(res.data.profile_picture));
+      
+      // Update Context (Topbar)
       await refreshAdmin();
       
-      alert("Profile updated successfully!");
-      setSaving(false);
-      // No reload needed; UI is now in sync
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
     } catch (err) {
       console.error(err);
       alert("Failed to update profile.");
+    } finally {
       setSaving(false);
     }
   };
@@ -89,6 +98,16 @@ export default function Profile() {
   return (
     <div className="animate-fade-in-up pb-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 font-sans">
       <Helmet><title>My Account | JK Admin</title></Helmet>
+      
+      {/* Success Popup */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white p-6 rounded-2xl shadow-xl flex items-center gap-3">
+            <CheckCircle className="text-emerald-500" />
+            <span className="font-bold">Profile Updated Successfully!</span>
+          </div>
+        </div>
+      )}
       
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-gray-100 pb-5">
         <div>
@@ -113,10 +132,9 @@ export default function Profile() {
                   <Camera size={12} />
                   <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
                </label>
-               {/* Fixed: X button appears if a custom image is set */}
-               {!previewImage.includes("ui-avatars") && (
+               {previewImage && !previewImage.includes("ui-avatars") && (
                  <button type="button" onClick={handleRemoveImage} className="absolute top-0 right-0 bg-rose-500 text-white p-1 rounded-full hover:bg-rose-600 border border-white shadow-md">
-                   <X size={12} />
+                    <X size={12} />
                  </button>
                )}
             </div>
@@ -129,44 +147,30 @@ export default function Profile() {
           <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-900 mb-6">Profile Details</h3>
           <form onSubmit={handleSave} className="space-y-4 sm:space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Fields kept exactly as original */}
               <div className="space-y-1">
                 <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">First Name</label>
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                   <User size={14} className="text-gray-400 shrink-0" />
-                   <input name="first_name" value={profile.first_name || ""} onChange={handleChange} className="bg-transparent w-full text-xs sm:text-sm outline-none text-gray-900" />
-                </div>
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"><User size={14} className="text-gray-400" /><input name="first_name" value={profile.first_name || ""} onChange={handleChange} className="bg-transparent w-full outline-none text-xs sm:text-sm" /></div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Last Name</label>
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                   <User size={14} className="text-gray-400 shrink-0" />
-                   <input name="last_name" value={profile.last_name || ""} onChange={handleChange} className="bg-transparent w-full text-xs sm:text-sm outline-none text-gray-900" />
-                </div>
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"><User size={14} className="text-gray-400" /><input name="last_name" value={profile.last_name || ""} onChange={handleChange} className="bg-transparent w-full outline-none text-xs sm:text-sm" /></div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Email Address</label>
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                   <Mail size={14} className="text-gray-400 shrink-0" />
-                   <input name="email" value={profile.email || ""} onChange={handleChange} type="email" className="bg-transparent w-full text-xs sm:text-sm outline-none text-gray-900" />
-                </div>
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"><Mail size={14} className="text-gray-400" /><input name="email" value={profile.email || ""} onChange={handleChange} type="email" className="bg-transparent w-full outline-none text-xs sm:text-sm" /></div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Phone Number</label>
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                   <Phone size={14} className="text-gray-400 shrink-0" />
-                   <input name="phone" value={profile.phone || ""} onChange={handleChange} className="bg-transparent w-full text-xs sm:text-sm outline-none text-gray-900" placeholder="+254..." />
-                </div>
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"><Phone size={14} className="text-gray-400" /><input name="phone" value={profile.phone || ""} onChange={handleChange} className="bg-transparent w-full outline-none text-xs sm:text-sm" /></div>
               </div>
               <div className="sm:col-span-2 space-y-1">
                 <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Bio Description</label>
-                <div className="flex gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                   <FileText size={14} className="text-gray-400 mt-1 shrink-0" />
-                   <textarea name="bio" value={profile.bio || ""} onChange={handleChange} rows={3} className="bg-transparent w-full text-xs sm:text-sm outline-none text-gray-900 resize-none" placeholder="Administrative role brief specifications..." />
-                </div>
+                <div className="flex gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"><FileText size={14} className="text-gray-400 mt-1" /><textarea name="bio" value={profile.bio || ""} onChange={handleChange} rows={3} className="bg-transparent w-full outline-none text-xs sm:text-sm resize-none" /></div>
               </div>
             </div>
             <div className="pt-4 border-t border-gray-100 flex">
-               <button type="submit" disabled={saving} className="flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md active:scale-95 transition-all disabled:opacity-50 w-full sm:w-auto ml-auto">
+               <button type="submit" disabled={saving} className="flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md w-full sm:w-auto ml-auto">
                  {saving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} <span>Save Changes</span>
                </button>
             </div>

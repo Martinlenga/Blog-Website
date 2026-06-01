@@ -63,22 +63,12 @@ class AdminProfileView(APIView):
 
     def put(self, request):
         profile, _ = AdminProfile.objects.get_or_create(user=request.user)
-        
-        # We pass request.data to the serializer
-        serializer = AdminProfileSerializer(
-            profile, data=request.data, partial=True
-        )
+        serializer = AdminProfileSerializer(profile, data=request.data, partial=True)
         
         if serializer.is_valid():
-            # 1. This save() calls the .update() method in your Serializer
-            # which we configured to handle image removal and user field updates
             serializer.save()
-            
-            # 2. Returning serializer.data sends the FRESH updated profile
-            # back to React, which allows your handleSave in Profile.js 
-            # to do setProfile(res.data) and update the UI instantly.
-            return Response(serializer.data)
-            
+            # Return the updated profile immediately
+            return Response(serializer.data) 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

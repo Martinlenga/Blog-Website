@@ -63,10 +63,12 @@ MIDDLEWARE = [
 # ----------------------------------------------------------------------
 
 # Dynamically registers your authorized domains
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", 
-    "https://ithaguru.co.ke,https://www.ithaguru.co.ke,http://localhost:3000,http://127.0.0.1:3000"
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://ithaguru.co.ke",
+    "https://www.ithaguru.co.ke"
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -95,8 +97,15 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = not DEBUG
+
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 Week
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+X_FRAME_OPTIONS = 'ALLOWALL'
 
 # ----------------------------------------------------------------------
 # CORE ROUTING AND ARCHITECTURE
