@@ -55,12 +55,18 @@ export default function PostModal({ open, post, onClose, refresh }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Compress image to under 500KB before uploading
       const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
       try {
         const compressed = await imageCompression(file, options);
-        setBanner(compressed);
-        setPreview(URL.createObjectURL(compressed));
+        
+        // FIX: Wrap the compressed blob in a File object with the original name
+        const renamedFile = new File([compressed], file.name, { 
+          type: file.type,
+          lastModified: Date.now()
+        });
+        
+        setBanner(renamedFile);
+        setPreview(URL.createObjectURL(renamedFile));
       } catch (err) {
         console.error("Compression failed:", err);
       }
@@ -73,21 +79,19 @@ export default function PostModal({ open, post, onClose, refresh }) {
 
     const payload = new FormData();
     
-    // Append all text fields
+    // 1. Append all text fields
     Object.keys(formData).forEach((key) => {
-      // Boolean values need to be strings "true"/"false" for Django
-      const value = typeof formData[key] === "boolean" ? (formData[key] ? "true" : "false") : formData[key];
-      payload.append(key, value);
+      const value = formData[key];
+      payload.append(key, typeof value === "boolean" ? (value ? "true" : "false") : value);
     });
 
-    // ONLY append the banner if a new file was actually selected
-    if (banner) {
-      payload.append("banner_image", banner);
+    // 2. Append the banner file ONLY if it's a file object
+    if (banner instanceof File) {
+      // 3-argument version: (key, file_object, filename)
+      payload.append("banner_image", banner, banner.name);
     }
 
     try {
-      // IMPORTANT: Do not pass any 'headers' object here. 
-      // Axios will detect the FormData and set the Content-Type automatically.
       if (post) {
         await updateAdminPost(post.slug, payload);
       } else {

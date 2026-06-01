@@ -22,7 +22,10 @@ export default function Profile() {
   const getImageUrl = (url) => {
     if (!url) return `https://ui-avatars.com/api/?name=${profile.username || 'Admin'}&background=4f46e5&color=fff`;
     if (url.startsWith("http")) return url;
-    return `${process.env.REACT_APP_API_URL?.replace('/api', '')}${url}?t=${new Date().getTime()}`;
+    
+    // Just return the path directly. 
+    // If the path is /media/admin_profiles/..., it will work if Nginx is configured right.
+    return url.startsWith('/') ? url : `/${url}`;
   };
 
   useEffect(() => {
