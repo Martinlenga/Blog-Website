@@ -5,11 +5,11 @@ const API = axios.create({ baseURL: API_URL });
 
 /* INTERCEPTORS */
 API.interceptors.request.use((config) => {
-  // Check if we are trying to login
+  // 🔹 FIX: Do NOT attach Authorization header for the login endpoint
   if (!config.url.includes("login/")) {
     const token = localStorage.getItem("admin_access");
     if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
   }
   return config;
