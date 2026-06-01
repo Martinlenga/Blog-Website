@@ -5,6 +5,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
+from rest_framework import status
 
 
 class AdminTokenSerializer(TokenObtainPairSerializer):
@@ -17,6 +19,7 @@ class AdminTokenSerializer(TokenObtainPairSerializer):
 
 class AdminLoginView(TokenObtainPairView):
     serializer_class = AdminTokenSerializer
+    permission_classes = [AllowAny]
 
 
 class AdminLogoutView(APIView):
