@@ -99,7 +99,7 @@ CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 Week
@@ -185,3 +185,7 @@ MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE")
 MPESA_PASSKEY = os.getenv("MPESA_PASSKEY")
 MPESA_ENV = os.getenv("MPESA_ENV", "sandbox")
 MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL")
+
+# Add these to your settings.py
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
+FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
