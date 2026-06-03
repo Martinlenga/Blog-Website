@@ -4,12 +4,19 @@ import AdminSidebar from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
 
 export default function AdminLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // 🚀 THE FIX: Dynamically set the default state based on screen size!
+  // Desktop screens start OPEN (true). Mobile screens start CLOSED (false).
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // We check if window exists to prevent errors during any server-side rendering
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
+  
   const location = useLocation();
 
-  // 🚀 UX OPTIMIZATION: Automatically close the mobile sidebar whenever the user 
-  // navigates to a new page. This eliminates the need to manually pass close functions 
-  // to every single Navigation Link inside the Sidebar component.
+  // 🚀 UX OPTIMIZATION: Automatically close the mobile sidebar on navigation.
   useEffect(() => {
     // Only auto-close the sidebar if the user is on a small screen!
     if (window.innerWidth < 1024) {
@@ -25,7 +32,7 @@ export default function AdminLayout() {
         <div 
           onClick={() => setSidebarOpen(false)}
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
-          aria-hidden="true" // 🔹 a11y: Tells screen readers to ignore this purely visual backdrop
+          aria-hidden="true" 
         />
       )}
 
@@ -33,7 +40,6 @@ export default function AdminLayout() {
       <AdminSidebar 
         open={sidebarOpen} 
         toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        // We can safely remove closeMobileSidebar prop now since the useEffect handles it!
       />
 
       {/* Main Content Wrapper */}

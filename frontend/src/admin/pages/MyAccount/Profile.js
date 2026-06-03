@@ -22,12 +22,20 @@ export default function Profile() {
 
   // Helper to force re-fetch of image by adding a timestamp (Cache-Buster)
   const getImageUrl = (url) => {
+    // 1. Fallback for no image
     if (!url) return `https://ui-avatars.com/api/?name=${profile.username || 'Admin'}&background=4f46e5&color=fff`;
-    if (url.startsWith("http")) return url;
+
+    // 2. MIXED CONTENT FIX: Force secure HTTPS if Django sends HTTP
+    if (typeof url === 'string' && url.includes("api.ithaguru.co.ke")) {
+      return url.replace("http://", "https://");
+    }
+
+    // 3. Safe external links (e.g., Google auth)
+    if (typeof url === 'string' && url.startsWith("http")) return url;
     
+    // 4. THE DOMAIN FIX: Hardcode the Contabo API URL as the safety net
+    const apiBase = (process.env.REACT_APP_API_URL || "https://api.ithaguru.co.ke/api").replace(/\/api\/?$/, "");
     const cleanPath = url.startsWith('/') ? url : `/${url}`;
-    const apiBase = process.env.REACT_APP_API_URL?.replace('/api', '') || "";
-    if (url.includes(apiBase)) return url;
     
     return `${apiBase}${cleanPath}`;
   };
