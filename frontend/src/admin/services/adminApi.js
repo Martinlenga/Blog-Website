@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// Safely construct the URL for Next.js, ensuring no double-slashes
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000/api";
+// FIXED: Now correctly looking for standard React environment variables
+const BASE_URL = (process.env.REACT_APP_API_URL || "http://localhost:8000/api").replace(/\/+$/, "");
 const API_URL = `${BASE_URL}/admin/`;
 
 const API = axios.create({ baseURL: API_URL });
