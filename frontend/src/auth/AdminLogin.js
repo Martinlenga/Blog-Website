@@ -34,8 +34,8 @@ export default function AdminLogin() {
     if (!form.password) {
       errors.password = "Password is required.";
       isValid = false;
-    } else if (form.password.length < 4) {
-      errors.password = "Security architecture requires at least 4 characters.";
+    } else if (form.password.length < 8) { // 🔹 Synchronized with Django's 8-char minimum
+      errors.password = "Security architecture requires at least 8 characters.";
       isValid = false;
     }
 
@@ -69,13 +69,13 @@ export default function AdminLogin() {
           errorMessage = data.error;
         }
         
-        if (errorMessage.toLowerCase().includes("user")) {
-          setFieldErrors(prev => ({ ...prev, username: "Unknown administrative username." }));
+        if (errorMessage.toLowerCase().includes("user") || errorMessage.toLowerCase().includes("account")) {
+          setFieldErrors(prev => ({ ...prev, username: "Unknown or deactivated administrative account." }));
         } else if (errorMessage.toLowerCase().includes("password")) {
           setFieldErrors(prev => ({ ...prev, password: "Incorrect password structure." }));
         }
       } else if (err.message) {
-        errorMessage = "Network timeout. Check your VPS status or server internet pipeline.";
+        errorMessage = "Network timeout. Check your server connection.";
       }
 
       setGlobalError(errorMessage);
@@ -94,7 +94,6 @@ export default function AdminLogin() {
   }, []);
 
   return (
-    // 📱 Changed py-6 to give smaller viewports vertical breathing room
     <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] relative overflow-hidden font-sans px-4 py-6 sm:px-6 lg:px-8">
       <Helmet>
         <title>Admin Login | JK Ithaguru</title>
@@ -105,12 +104,9 @@ export default function AdminLogin() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-purple-200/40 rounded-full blur-[60px] sm:blur-[100px]"></div>
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
-      {/* 📱 RESPONSIVE CONTAINER CARD
-          Swapped rounded-[2rem] to rounded-2xl on mobile, scaling up to rounded-[2rem] on desktop.
-          Changed width layout definitions to handle auto-scaling behavior fluidly. */}
       <div className="relative z-10 w-full max-w-md md:max-w-5xl bg-white rounded-2xl md:rounded-[2rem] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] md:shadow-[0_40px_100px_-15px_rgba(0,0,0,0.1)] border border-white/50 overflow-hidden flex flex-col md:flex-row min-h-[500px] md:min-h-[600px]">
         
-        {/* LEFT BRAND SECTION (Hidden on small viewports) */}
+        {/* LEFT BRAND SECTION */}
         <div className="hidden md:flex w-1/2 bg-slate-900 relative flex-col justify-between p-12 text-white overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full blur-[80px] opacity-20 -mr-16 -mt-16"></div>
           <div className="relative z-10">
@@ -134,11 +130,9 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        {/* 📱 RIGHT INPUT PANEL
-            Changed from standard p-10 to p-6 for narrow layouts, shifting cleanly up to p-16 on desktop grids. */}
+        {/* RIGHT INPUT PANEL */}
         <div className="w-full md:w-1/2 p-6 sm:p-10 md:p-16 flex flex-col justify-center bg-white/80 backdrop-blur-sm">
           
-          {/* Mobile Branding Header (Only shows when left column is hidden) */}
           <div className="flex md:hidden items-center gap-2 mb-6 self-start bg-slate-900/5 px-3 py-1.5 rounded-lg border border-slate-900/10">
             <LayoutDashboard size={16} className="text-indigo-600" />
             <span className="font-bold text-xs tracking-wider text-slate-900">JK ADMIN</span>
@@ -149,7 +143,6 @@ export default function AdminLogin() {
             <p className="text-gray-500 text-xs sm:text-sm">Please enter your credentials to authenticate.</p>
           </div>
 
-          {/* DYNAMIC GLOBAL ERROR NOTIFICATION */}
           <div className={`transition-all duration-300 ease-in-out overflow-hidden ${globalError ? "max-h-32 opacity-100 mb-4 sm:mb-6" : "max-h-0 opacity-0 mb-0"}`}>
             <div className="p-3 sm:p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs sm:text-sm flex items-start gap-2.5 sm:gap-3 shadow-sm">
               <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
@@ -162,7 +155,7 @@ export default function AdminLogin() {
             {/* USERNAME BLOCK */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center px-1">
-                <label className="text-xs sm:text-sm font-semibold text-gray-700">Username</label>
+                <label htmlFor="username" className="text-xs sm:text-sm font-semibold text-gray-700 cursor-pointer">Username</label>
                 {fieldErrors.username && <span className="text-[11px] sm:text-xs text-red-500 font-medium animate-fade-in">{fieldErrors.username}</span>}
               </div>
               <div className="relative group">
@@ -170,7 +163,9 @@ export default function AdminLogin() {
                   <User className={`transition-colors duration-200 ${fieldErrors.username ? "text-red-400" : "text-gray-400 group-focus-within:text-indigo-600"}`} size={18} />
                 </div>
                 <input
+                  id="username"
                   type="text"
+                  autoComplete="username"
                   className={`w-full bg-gray-50 border text-gray-900 text-sm sm:text-base rounded-xl py-3 sm:py-3.5 pl-10 sm:pl-12 pr-4 outline-none focus:bg-white focus:ring-4 transition-all placeholder:text-gray-400 font-medium ${
                     fieldErrors.username 
                       ? "border-red-300 focus:ring-red-50" 
@@ -186,7 +181,7 @@ export default function AdminLogin() {
             {/* PASSWORD BLOCK */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center px-1">
-                <label className="text-xs sm:text-sm font-semibold text-gray-700">Password</label>
+                <label htmlFor="password" className="text-xs sm:text-sm font-semibold text-gray-700 cursor-pointer">Password</label>
                 {fieldErrors.password && <span className="text-[11px] sm:text-xs text-red-500 font-medium animate-fade-in">{fieldErrors.password}</span>}
               </div>
               <div className="relative group">
@@ -194,7 +189,9 @@ export default function AdminLogin() {
                   <Lock className={`transition-colors duration-200 ${fieldErrors.password ? "text-red-400" : "text-gray-400 group-focus-within:text-indigo-600"}`} size={18} />
                 </div>
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   className={`w-full bg-gray-50 border text-gray-900 text-sm sm:text-base rounded-xl py-3 sm:py-3.5 pl-10 sm:pl-12 pr-10 sm:pr-12 outline-none focus:bg-white focus:ring-4 transition-all placeholder:text-gray-400 font-medium ${
                     fieldErrors.password 
                       ? "border-red-300 focus:ring-red-50" 
@@ -206,6 +203,7 @@ export default function AdminLogin() {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -214,7 +212,6 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {/* SUBMIT EXECUTION BUTTON */}
             <button
               type="submit"
               disabled={loading}
@@ -236,7 +233,6 @@ export default function AdminLogin() {
             </button>
           </form>
 
-          {/* SECURITY TRUST FOOTER */}
           <div className="mt-6 sm:mt-8 flex items-center justify-center gap-2 text-[10px] sm:text-xs text-gray-400 font-medium bg-gray-50 py-2 sm:py-2.5 rounded-lg border border-gray-100 w-full sm:w-fit mx-auto px-4 text-center">
             <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
             <span>Encrypted Administration Connection Endpoint</span>

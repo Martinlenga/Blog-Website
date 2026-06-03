@@ -2,24 +2,34 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { 
   Home, FileText, DollarSign, MessageSquare, Folder, 
-  ChevronDown, ShieldCheck, Activity 
+  ChevronDown, Activity 
 } from "lucide-react";
 
-export default function AdminSidebar({ open = false, toggleSidebar, closeMobileSidebar }) {
+// Removed the obsolete closeMobileSidebar prop
+export default function AdminSidebar({ open = false, toggleSidebar }) {
   const location = useLocation();
-  const storedSections = JSON.parse(localStorage.getItem("sidebar_sections") || "{}");
   
-  const [sections, setSections] = useState({
-    dashboard: true,
-    posts: false,
-    payments: false,
-    feedback: false,
-    system: false,
-    ...storedSections,
+  // 🚀 PERFORMANCE FIX: Lazy initialization (the arrow function) ensures we 
+  // only parse localStorage once on mount, not on every single render cycle.
+  const [sections, setSections] = useState(() => {
+    // Wrap in try/catch in case the user's localStorage JSON is corrupted
+    try {
+      const stored = JSON.parse(localStorage.getItem("sidebar_sections") || "{}");
+      return {
+        dashboard: true,
+        posts: false,
+        payments: false,
+        feedback: false,
+        system: false,
+        ...stored,
+      };
+    } catch {
+      return { dashboard: true, posts: false, payments: false, feedback: false, system: false };
+    }
   });
 
   const toggleSection = (key) => {
-    // If user clicks a section while sidebar is closed, open it first
+    // If user clicks a section while sidebar is closed, open the sidebar first
     if (!open) toggleSidebar();
     
     const newSections = { ...sections, [key]: !sections[key] };
@@ -44,12 +54,17 @@ export default function AdminSidebar({ open = false, toggleSidebar, closeMobileS
           ${open ? "w-72 translate-x-0" : "w-72 -translate-x-full lg:translate-x-0 lg:w-20"}
         `}
       >
-        {/* BRAND HEADER - Clicking here now toggles open/close */}
+        {/* BRAND HEADER */}
         <div 
             className="h-20 flex items-center justify-center border-b border-slate-800/50 bg-[#0B1120] shrink-0 cursor-pointer" 
-            onClick={() => window.innerWidth >= 1024 && toggleSidebar()}
+            onClick={() => {
+              // Ensure window is defined to prevent SSR crashes if ported to Next.js later
+              if (typeof window !== "undefined" && window.innerWidth >= 1024) toggleSidebar();
+            }}
         >
-          {(open || window.innerWidth < 1024) ? (
+          {/* 🚀 BUG FIX: We only need to check `open` now. If it's closed on mobile, 
+              it's off-screen anyway, so rendering the mini-icon doesn't hurt anything. */}
+          {open ? (
              <div className="flex items-center gap-3 px-6 w-full animate-fade-in">
                <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-900/50 ring-1 ring-white/10 shrink-0">
                  <Activity size={20} strokeWidth={2.5} />
@@ -80,19 +95,19 @@ export default function AdminSidebar({ open = false, toggleSidebar, closeMobileS
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <section.icon size={20} className={`shrink-0 transition-colors duration-300 ${isSectionActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300"}`} />
-                    {(open || window.innerWidth < 1024) && <span className="font-medium text-sm tracking-wide truncate">{section.label}</span>}
+                    {open && <span className="font-medium text-sm tracking-wide truncate">{section.label}</span>}
                   </div>
-                  {(open || window.innerWidth < 1024) && (
+                  {open && (
                      <ChevronDown size={14} className={`transition-transform duration-300 text-slate-600 shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
                   )}
                 </button>
 
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && (open || window.innerWidth < 1024) ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
                   <div className="ml-5 pl-4 border-l border-slate-800 space-y-1 py-2 mt-1">
                     {section.items.map((item, idx) => (
                       <NavLink
                         key={idx} to={item.path} end={item.end}
-                        onClick={() => window.innerWidth < 1024 && closeMobileSidebar()}
+                        // 🚀 BUG FIX: Removed closeMobileSidebar() call. Layout handles this now.
                         className={({ isActive }) => `relative block px-4 py-2.5 text-sm rounded-lg transition-all duration-200 ${isActive ? "text-white bg-indigo-600 shadow-md font-medium" : "text-slate-500 hover:text-slate-200 hover:bg-slate-800/30"}`}
                       >
                         {item.label}

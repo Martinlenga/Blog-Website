@@ -1,13 +1,27 @@
 import axios from "axios";
 
-const API_URL = `${process.env.REACT_APP_API_URL}/admin/`;
+// Safely construct the URL for Next.js, ensuring no double-slashes
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000/api";
+const API_URL = `${BASE_URL}/admin/`;
+
 const API = axios.create({ baseURL: API_URL });
 
-/* INTERCEPTORS */
+// Helper function to surgically clear only admin auth state without destroying public user sessions
+const clearAdminAuth = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("admin_access");
+    localStorage.removeItem("admin_refresh");
+    localStorage.removeItem("admin_user");
+  }
+};
+
+/* ------------------------------------------------------------------
+ * 🛡️ REQUEST INTERCEPTOR: Attach JWT securely
+ * ------------------------------------------------------------------ */
 API.interceptors.request.use((config) => {
-  // 🔹 FIX: Do NOT attach Authorization header for the login endpoint
+  // Do NOT attach Authorization header for the login endpoint
   if (!config.url.includes("login/")) {
-    const token = localStorage.getItem("admin_access");
+    const token = typeof window !== "undefined" ? localStorage.getItem("admin_access") : null;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -15,38 +29,48 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+/* ------------------------------------------------------------------
+ * 🔄 RESPONSE INTERCEPTOR: Handle 401s and Token Refresh
+ * ------------------------------------------------------------------ */
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // 🔹 1. If the request failed on the login endpoint itself, reject IMMEDIATELY.
-    // Do not clear localStorage, do not redirect, do not pass go.
+    // 1. If the request failed on the login endpoint itself, reject IMMEDIATELY.
     if (originalRequest.url.includes("login/")) {
       return Promise.reject(error);
     }
 
-    // 🔹 2. Handle token expiration for other authenticated dashboard routes
+    // 2. Handle token expiration for other authenticated dashboard routes
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      const refreshToken = localStorage.getItem("admin_refresh");
+      const refreshToken = typeof window !== "undefined" ? localStorage.getItem("admin_refresh") : null;
       
       if (refreshToken) {
         try {
+          // Attempt to fetch a new access token
           const { data } = await axios.post(`${API_URL}token/refresh/`, { refresh: refreshToken });
-          localStorage.setItem("admin_access", data.access);
+          
+          if (typeof window !== "undefined") {
+            localStorage.setItem("admin_access", data.access);
+          }
+          
+          // Update the failed request with the new token and retry
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return API(originalRequest);
+          
         } catch (err) {
-          // Only clear and redirect if token refresh fails on a dashboard subpage
-          localStorage.clear();
-          if (window.location.pathname !== "/admin/login") {
+          // Token refresh failed (refresh token expired/blacklisted)
+          clearAdminAuth();
+          if (typeof window !== "undefined" && window.location.pathname !== "/admin/login") {
             window.location.href = "/admin/login";
           }
         }
       } else {
-        localStorage.clear();
-        if (window.location.pathname !== "/admin/login") {
+        // No refresh token available at all
+        clearAdminAuth();
+        if (typeof window !== "undefined" && window.location.pathname !== "/admin/login") {
           window.location.href = "/admin/login";
         }
       }
@@ -55,15 +79,20 @@ API.interceptors.response.use(
   }
 );
 
-/* ENDPOINTS */
+/* ------------------------------------------------------------------
+ * 🔌 ENDPOINTS
+ * ------------------------------------------------------------------ */
+
 // Auth
-export const adminLogin = (creds) => API.post("login/", creds); // Renamed to match
-export const adminLogout = (refresh) => API.post("logout/", { refresh }); // Renamed to match
+export const adminLogin = (creds) => API.post("login/", creds);
+export const adminLogout = (refresh) => API.post("logout/", { refresh });
 
 // Dashboard & Posts
 export const getDashboardStats = () => API.get("dashboard/");
 export const getAdminPosts = (params) => API.get("posts/", { params });
 export const getAdminPostBySlug = (slug) => API.get(`posts/${slug}/`);
+
+// Note: When sending FormData (for banner_image), Axios automatically sets the correct multipart headers
 export const createAdminPost = (data) => API.post("posts/", data);
 export const updateAdminPost = (slug, data) => API.patch(`posts/${slug}/`, data);
 export const deleteAdminPost = (slug) => API.delete(`posts/${slug}/`);
@@ -90,7 +119,7 @@ export const getFeedbackAnalytics = () => API.get("feedbacks/analytics/");
 // System
 export const getAdminAuditLogs = (params) => API.get("audit-logs/", { params });
 
-// Profile & Password (RENAMED HERE TO FIX YOUR ERROR)
+// Profile & Password
 export const getAdminProfile = () => API.get("profile/"); 
 export const updateAdminProfile = (data) => API.put("profile/", data);
 export const changeAdminPassword = (data) => API.post("change-password/", data);

@@ -1,7 +1,12 @@
 import React from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 const StatCard = ({ label, value, trend, icon: Icon, color = "indigo" }) => {
+  const hasTrendData = trend !== undefined && trend !== null;
+  const isPositive = trend > 0;
+  const isNegative = trend < 0;
+  const isNeutral = trend === 0;
+
   const themes = {
     indigo: "bg-indigo-50 text-indigo-600",
     emerald: "bg-emerald-50 text-emerald-600",
@@ -12,25 +17,46 @@ const StatCard = ({ label, value, trend, icon: Icon, color = "indigo" }) => {
   return (
     <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
       <div className="flex justify-between items-start gap-3">
-        <div className="min-w-0 flex-1"> {/* Added flex-1 to allow text to take remaining space */}
-          {/* Removed 'truncate' and added 'leading-tight' to allow multiline wrapping */}
-          <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider mb-1.5 leading-tight">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-gray-500 text-[11px] font-bold uppercase tracking-wider mb-1.5 leading-tight">
             {label}
-          </p>
-          <h3 className="font-sans text-2xl font-bold text-gray-900 truncate tracking-tight">
+          </h2>
+          <div className="font-sans text-2xl font-bold text-gray-900 truncate tracking-tight">
             {value}
-          </h3>
+          </div>
         </div>
-        <div className={`p-2.5 rounded-xl shrink-0 ${themes[color]} bg-opacity-50`}>
-          <Icon size={18} strokeWidth={2.5} />
-        </div>
+        
+        {Icon && (
+          <div 
+            className={`p-2.5 rounded-xl shrink-0 ${themes[color] || themes.indigo}`}
+            aria-hidden="true"
+          >
+            <Icon size={18} strokeWidth={2.5} />
+          </div>
+        )}
       </div>
       
       <div className="flex items-center gap-2 mt-4">
-        {trend !== undefined && (
-          <span className={`flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${trend >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-            <TrendingUp size={10} className="mr-1" /> {trend}%
-          </span>
+        {hasTrendData && (
+          <div 
+            className={`flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              isPositive ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+              : isNegative ? "bg-rose-50 text-rose-700 border-rose-100"
+              : "bg-gray-50 text-gray-600 border-gray-200"
+            }`}
+          >
+            {/* 🚀 BUG FIX: Dynamically swap the icon based on the trend direction */}
+            {isPositive && <TrendingUp size={12} className="mr-1" aria-hidden="true" />}
+            {isNegative && <TrendingDown size={12} className="mr-1" aria-hidden="true" />}
+            {isNeutral && <Minus size={12} className="mr-1" aria-hidden="true" />}
+            
+            <span>{Math.abs(trend)}%</span>
+            
+            {/* A11y context for screen readers */}
+            <span className="sr-only">
+              {isPositive ? 'increase' : isNegative ? 'decrease' : 'no change'}
+            </span>
+          </div>
         )}
         <span className="text-[11px] text-gray-400 font-medium">vs last month</span>
       </div>

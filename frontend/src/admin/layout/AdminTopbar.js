@@ -12,18 +12,22 @@ export default function AdminTopbar({ toggleSidebar }) {
 
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
+  // 🚀 PERFORMANCE FIX: Only attach the document event listener when the dropdown 
+  // is actually open. This saves unnecessary DOM calculations on every single page click.
   useEffect(() => {
+    if (!dropdownOpen) return;
+
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [dropdownOpen]);
 
   return (
-    // 📱 Scaled internal layout tracking metrics down on small screens (px-4 to px-8)
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between transition-all duration-300">
       
       {/* LEFT: Sidebar Toggle Trigger Button */}
@@ -32,6 +36,7 @@ export default function AdminTopbar({ toggleSidebar }) {
           onClick={toggleSidebar}
           className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors outline-none"
           aria-label="Toggle sidebar"
+          aria-expanded={toggleSidebar ? "true" : "false"}
         >
           <Menu size={20} strokeWidth={2} />
         </button>
@@ -41,7 +46,10 @@ export default function AdminTopbar({ toggleSidebar }) {
       <div className="flex items-center gap-4 sm:gap-6" ref={dropdownRef}>
         
         {/* Notification Bell */}
-        <button className="relative text-gray-400 hover:text-indigo-600 transition-colors p-1">
+        <button 
+          className="relative text-gray-400 hover:text-indigo-600 transition-colors p-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 rounded-md"
+          aria-label="View notifications"
+        >
           <Bell size={20} strokeWidth={2} />
           <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
         </button>
@@ -53,7 +61,10 @@ export default function AdminTopbar({ toggleSidebar }) {
         <div className="relative">
           <button
             onClick={toggleDropdown}
-            className="flex items-center gap-2 sm:gap-3 group focus:outline-none"
+            className="flex items-center gap-2 sm:gap-3 group focus:outline-none rounded-full"
+            aria-haspopup="menu"
+            aria-expanded={dropdownOpen}
+            aria-controls="profile-menu"
           >
             {/* User Meta Summary Nameplate */}
             <div className="text-right hidden sm:block">
@@ -71,7 +82,7 @@ export default function AdminTopbar({ toggleSidebar }) {
             ) : (
               <img
                 src={admin.profileImage || "https://ui-avatars.com/api/?name=Admin"}
-                alt="profile"
+                alt="Admin profile"
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-gray-100 shadow-sm group-hover:shadow-md transition-all"
               />
             )}
@@ -84,14 +95,19 @@ export default function AdminTopbar({ toggleSidebar }) {
 
           {/* Elegant Floating Dropdown Menu Panel */}
           {dropdownOpen && (
-            <div className="absolute right-0 top-14 w-56 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 py-1.5 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right z-50">
-              <div className="px-4 py-3 border-b border-gray-50">
+            <div 
+              id="profile-menu"
+              role="menu"
+              className="absolute right-0 top-14 w-56 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 py-1.5 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right z-50"
+            >
+              <div className="px-4 py-3 border-b border-gray-50" role="none">
                 <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Signed in as</p>
                 <p className="text-sm font-bold text-gray-900 truncate mt-0.5">{admin?.email || "admin@jk.com"}</p>
               </div>
 
-              <div className="p-1 space-y-0.5">
+              <div className="p-1 space-y-0.5" role="none">
                 <button
+                  role="menuitem"
                   className="w-full text-left px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg flex items-center gap-3 transition-colors"
                   onClick={() => { navigate("/admin/my-account/profile"); setDropdownOpen(false); }}
                 >
@@ -99,6 +115,7 @@ export default function AdminTopbar({ toggleSidebar }) {
                 </button>
 
                 <button
+                  role="menuitem"
                   className="w-full text-left px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg flex items-center gap-3 transition-colors"
                   onClick={() => { navigate("/admin/my-account/change-password"); setDropdownOpen(false); }}
                 >
@@ -106,10 +123,11 @@ export default function AdminTopbar({ toggleSidebar }) {
                 </button>
               </div>
 
-              <div className="h-[1px] bg-gray-100 my-1 mx-2"></div>
+              <div className="h-[1px] bg-gray-100 my-1 mx-2" role="none"></div>
 
-              <div className="p-1">
+              <div className="p-1" role="none">
                 <button
+                  role="menuitem"
                   className="w-full text-left px-3 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-3 transition-colors"
                   onClick={() => { logout(); setDropdownOpen(false); }}
                 >

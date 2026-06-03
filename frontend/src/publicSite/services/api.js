@@ -1,5 +1,6 @@
-// Use the environment variable, fallback to localhost
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
+// Remove trailing slashes safely if they exist in the env variable
+const BASE_URL = (process.env.REACT_APP_API_URL || "http://localhost:8000/api").replace(/\/+$/, "");
+const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 const buildHeaders = (jwt = null, extra = {}) => {
   const headers = { 
@@ -33,6 +34,19 @@ const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
   }
 };
 
+/* ------------------------------------------------------------------
+ * 🌐 PUBLIC FETCH: For logged-out visitors (Homepage, reading lists)
+ * ------------------------------------------------------------------ */
+export const fetchPublic = async (url, options = {}) => {
+  const jwt = localStorage.getItem("jwt");
+  // Still attaches token if it exists, but doesn't freak out if it fails
+  const res = await fetchWithTimeout(url, { ...options, headers: buildHeaders(jwt, options.headers) });
+  return handleResponse(res);
+};
+
+/* ------------------------------------------------------------------
+ * 🛡️ AUTH FETCH: For strict user actions (Payments, Unlocks)
+ * ------------------------------------------------------------------ */
 export const fetchWithAuth = async (url, options = {}, retry = true) => {
   let jwt = localStorage.getItem("jwt");
   const refresh = localStorage.getItem("refreshToken");
@@ -57,6 +71,7 @@ export const fetchWithAuth = async (url, options = {}, retry = true) => {
   return handleResponse(res);
 };
 
+/* ===================== AUTHENTICATION ===================== */
 export const googleLogin = async (token) => {
   const res = await fetchWithTimeout(`${API_BASE}/google-login/`, {
     method: "POST",
@@ -70,14 +85,10 @@ export const googleLogin = async (token) => {
   return data;
 };
 
-/* ===================== POSTS ===================== */
-export const getPosts = async () => fetchWithAuth(`${API_BASE}/posts/`);
-export const getPostBySlug = async (slug) => fetchWithAuth(`${API_BASE}/posts/${slug}/`);
+/* ===================== ARTICLES ===================== */
+export const getPosts = async () => fetchPublic(`${API_BASE}/posts/`);
 
-/* ===================== PERSISTENT UNLOCK ===================== */
-export const unlockPost = async (slug) => {
-  return fetchWithAuth(`${API_BASE}/posts/${slug}/unlock/`, { method: "POST" });
-};
+export const getPostBySlug = async (slug) => fetchWithAuth(`${API_BASE}/posts/${slug}/`);
 
 /* ===================== PAYMENTS ===================== */
 export const initiatePayment = async (slug, phone) => {
@@ -98,17 +109,20 @@ export const initiatePayment = async (slug, phone) => {
 };
 
 /* ===================== POLL UNLOCK ===================== */
+// 🚀 ARCHITECTURE FIX: This replaces the dead 'unlockPost' endpoint.
+// We just ask Django for the post again. If M-Pesa was successful, 
+// Django will automatically return the full content instead of null.
 export const pollPostUnlock = async (slug) => {
-  const post = await getPostBySlug(slug);
-  return post; 
+  const article = await getPostBySlug(slug);
+  return article; 
 };
 
-/* ===================== FEEDBACK ===================== */
-export const getFeedbacksByPost = async (postId) =>
-  fetchWithAuth(`${API_BASE}/feedbacks/?post=${postId}`);
+/* ===================== FEEDBACK / TESTIMONIALS ===================== */
+export const getFeedbacksByPost = async (articleId) =>
+  fetchPublic(`${API_BASE}/feedbacks/?post=${articleId}`);
 
-export const submitFeedback = async (postId, payload) =>
+export const submitFeedback = async (articleId, payload) =>
   fetchWithAuth(`${API_BASE}/feedbacks/`, {
     method: "POST",
-    body: JSON.stringify({ post: postId, ...payload }),
+    body: JSON.stringify({ post: articleId, ...payload }),
   });

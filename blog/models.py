@@ -1,10 +1,12 @@
+import math
+from io import BytesIO
+import sys
+from PIL import Image
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
-from django.utils import timezone
-from PIL import Image  # Requires Pillow: pip install Pillow
-import math
-import os # Added os import
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 class AdminProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
@@ -25,15 +27,16 @@ class Post(models.Model):
     banner_image = models.ImageField(upload_to="banners/", blank=True, null=True)
     category = models.CharField(max_length=50, default="General")
     featured = models.BooleanField(default=False)
-    # NEW: Draft system
+    
+    # Draft system
     is_published = models.BooleanField(default=True)
     
     price = models.DecimalField(max_digits=10, decimal_places=2, default=150.00)
     meta_description = models.CharField(max_length=160, blank=True)
     
-    # NEW: Analytics fields
+    # Analytics fields
     views = models.PositiveIntegerField(default=0)
-    reading_time_minutes = models.PositiveIntegerField(default=5)  # Stored for performance
+    reading_time_minutes = models.PositiveIntegerField(default=5)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -49,29 +52,43 @@ class Post(models.Model):
                 i += 1
             self.slug = slug
 
-        # 2. Featured Logic
+        # 2. Featured Logic (Un-feature others if this one is featured)
         if self.featured:
             Post.objects.exclude(pk=self.pk).update(featured=False)
 
         # 3. Calculate Reading Time
         if self.content:
             word_count = len(self.content.split())
-            self.reading_time_minutes = math.ceil(word_count / 200)  # Assuming 200 wpm
+            self.reading_time_minutes = math.ceil(word_count / 200) or 1
 
-        super().save(*args, **kwargs)
-
-        # 4. Image Optimization (Post-Save)
-        if self.banner_image:
+        # 4. Cloud-Safe Image Optimization (Pre-Save)
+        # Intercepts the file stream in memory before passing it to the storage backend
+        if self.banner_image and not self.pk: # Optimizes primarily on initial upload
             try:
-                img_path = self.banner_image.path
-                if os.path.exists(img_path): # Check if file exists before processing
-                    img = Image.open(img_path)
-                    if img.height > 1080 or img.width > 1920:
-                        output_size = (1920, 1080)
-                        img.thumbnail(output_size)
-                        img.save(img_path, quality=85, optimize=True)
-            except Exception:
-                pass  # Don't crash if image processing fails
+                img = Image.open(self.banner_image)
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                    
+                if img.height > 1080 or img.width > 1920:
+                    output_size = (1920, 1080)
+                    img.thumbnail(output_size)
+                    
+                    # Save the optimized image to a memory buffer
+                    output = BytesIO()
+                    img.save(output, format='JPEG', quality=85, optimize=True)
+                    output.seek(0)
+                    
+                    # Replace the original uploaded file with the optimized memory buffer
+                    filename = f"{self.banner_image.name.split('.')[0]}.jpg"
+                    self.banner_image = InMemoryUploadedFile(
+                        output, 'ImageField', filename,
+                        'image/jpeg', sys.getsizeof(output), None
+                    )
+            except Exception as e:
+                print(f"Image optimization failed: {e}")
+
+        # Always call super().save() LAST after mutating fields in memory
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -83,7 +100,10 @@ class PostAccess(models.Model):
     granted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("post", "user")
+        # Modern replacement for unique_together
+        constraints = [
+            models.UniqueConstraint(fields=['post', 'user'], name='unique_post_access')
+        ]
 
     def __str__(self):
         return f"{self.user} → {self.post.title}"
@@ -102,14 +122,15 @@ class PaymentTransaction(models.Model):
     phone = models.CharField(max_length=15)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
 
-    checkout_request_id = models.CharField(max_length=100, blank=True, null=True)
-    mpesa_receipt = models.CharField(max_length=50, blank=True, null=True)
+    # Database Indexes added here to prevent M-Pesa webhook timeouts
+    checkout_request_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    mpesa_receipt = models.CharField(max_length=50, blank=True, null=True, db_index=True)
 
     result_code = models.IntegerField(blank=True, null=True)
     result_desc = models.CharField(max_length=255, blank=True)
 
     status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default="PENDING"
+        max_length=10, choices=STATUS_CHOICES, default="PENDING", db_index=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -123,7 +144,6 @@ class Feedback(models.Model):
     rating = models.PositiveIntegerField(default=0)
     comment = models.TextField()
     is_approved = models.BooleanField(default=True)
-    # This field was missing in your original models.py but present in views.py
     secret_key = models.CharField(max_length=100, blank=True, null=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -139,7 +159,7 @@ class AdminAuditLog(models.Model):
         ("DELETE", "Delete"),
         ("LOGIN", "Login"),
         ("LOGOUT", "Logout"),
-        ("EXPORT", "Export"), # Added Export action
+        ("EXPORT", "Export"),
     ]
 
     admin = models.ForeignKey(User, on_delete=models.CASCADE)

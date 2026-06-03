@@ -12,7 +12,10 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
   const pollingRef = useRef(null);
   const hasCompletedRef = useRef(false);
 
-  // --- LOGIC (Untouched, works perfectly) ---
+  // Safely format the price for the UI
+  const formattedPrice = parseFloat(post.price || 0).toLocaleString();
+
+  // --- LOGIC ---
   const normalizePhone = (input) => {
     if (!input) return null;
     const digits = input.replace(/\D/g, "");
@@ -68,7 +71,7 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
       }
 
       let attempts = 0;
-      const maxAttempts = 20;
+      const maxAttempts = 20; // 60 seconds total (20 * 3s)
 
       pollingRef.current = setInterval(async () => {
         attempts += 1;
@@ -100,6 +103,13 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
     }
   };
 
+  // 🔹 FIX: Allow users to press "Enter" to submit
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handlePay();
+    }
+  };
+
   useEffect(() => {
     if (status === "error") {
       const timer = setTimeout(() => setStatus("idle"), 4000);
@@ -112,18 +122,18 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
       
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 relative">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all animate-in zoom-in-95 duration-300 relative">
         
         {/* Header */}
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Secure Payment</span>
+            <div className="w-2 h-2 rounded-full bg-[#4CAF50] animate-pulse"></div>
+            <span className="text-[11px] font-extrabold text-gray-700 uppercase tracking-widest">Secure Checkout</span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
-            <FiX size={20} />
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors bg-white hover:bg-gray-100 p-1.5 rounded-full">
+            <FiX size={18} />
           </button>
         </div>
 
@@ -131,28 +141,28 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
           
           <div className="text-center mb-8">
             <h3 className="text-gray-900 font-serif text-xl font-bold mb-1 line-clamp-1">{post.title}</h3>
-            <p className="text-gray-500 text-sm mb-4">Unlock premium access</p>
-            <div className="inline-block bg-indigo-50 px-4 py-2 rounded-xl">
-               <span className="text-indigo-700 font-bold text-2xl tracking-tight">KES {post.price}</span>
+            <p className="text-gray-500 text-sm mb-5">Unlock premium access</p>
+            <div className="inline-block bg-[#4CAF50]/10 px-5 py-2.5 rounded-xl border border-[#4CAF50]/20">
+               <span className="text-[#4CAF50] font-extrabold text-2xl tracking-tight">KES {formattedPrice}</span>
             </div>
           </div>
 
           {status === "pending" && (
-            <div className="mb-6 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium animate-pulse">
+            <div className="mb-6 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold border border-blue-100">
               <FiLoader className="animate-spin text-xl shrink-0" />
               {message}
             </div>
           )}
 
           {status === "error" && (
-             <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+             <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold border border-red-100 animate-in shake">
                <FiAlertCircle className="text-xl shrink-0" />
                {message}
              </div>
           )}
 
           {status === "success" && (
-             <div className="mb-6 bg-green-50 text-green-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+             <div className="mb-6 bg-green-50 text-green-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold border border-green-100">
                <FiCheck className="text-xl shrink-0" />
                {message}
              </div>
@@ -161,28 +171,29 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
           {/* Phone Input */}
           {(status === "idle" || status === "error") && (
             <div className="mb-8">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
                 M-Pesa Number
               </label>
               
-              <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-500 transition-all group">
-                <div className="bg-gray-100 px-4 py-3 border-r border-gray-200 text-gray-500 font-bold flex items-center gap-2 group-focus-within:bg-white group-focus-within:text-green-600 transition-colors">
-                  <FiSmartphone /> +254
+              <div className="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden focus-within:border-[#4CAF50] focus-within:ring-4 focus-within:ring-[#4CAF50]/10 transition-all group">
+                <div className="bg-gray-50 px-4 py-3.5 border-r border-gray-200 text-gray-500 font-bold flex items-center gap-2 group-focus-within:bg-[#4CAF50]/5 group-focus-within:text-[#4CAF50] group-focus-within:border-[#4CAF50]/20 transition-colors">
+                  <FiSmartphone size={18} /> +254
                 </div>
-                {/* UPDATED PLACEHOLDER */}
+                
                 <input 
                   type="tel" 
                   placeholder="7XX... or 1XX..."
-                  className="w-full px-4 py-3 outline-none text-gray-900 font-bold tracking-widest placeholder-gray-300"
+                  className="w-full px-4 py-3.5 outline-none text-gray-900 font-bold tracking-[0.15em] placeholder-gray-300 text-lg"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  onKeyDown={handleKeyDown} // 🔹 FIX: Enter key support
                   autoFocus
                 />
               </div>
               
               {/* HELPER TEXT */}
               <p className="text-[10px] text-gray-400 mt-2 ml-1 font-medium">
-                Enter number starting with <strong>7</strong> or <strong>1</strong> (e.g., 712... or 110...)
+                Enter number starting with <strong>7</strong> or <strong>1</strong>
               </p>
             </div>
           )}
@@ -191,21 +202,21 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
             {(status === "idle" || status === "error") && (
               <button 
                 onClick={handlePay}
-                className="w-full py-4 bg-[#4CAF50] hover:bg-[#43a047] text-white font-bold rounded-xl shadow-lg shadow-green-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 text-lg"
+                className="w-full py-4 bg-[#4CAF50] hover:bg-[#43a047] text-white font-extrabold rounded-xl shadow-lg shadow-[#4CAF50]/30 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 text-base uppercase tracking-wider"
               >
-                Pay KES {post.price}
+                Pay KES {formattedPrice}
               </button>
             )}
 
             {status === "pending" && (
-               <button disabled className="w-full py-4 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed">
+               <button disabled className="w-full py-4 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed uppercase tracking-wider text-sm">
                  Waiting for PIN...
                </button>
             )}
             
             <button 
               onClick={onClose}
-              className="text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors py-2"
+              className="text-gray-400 text-xs font-bold uppercase tracking-wider hover:text-gray-700 transition-colors py-2"
             >
               Cancel Transaction
             </button>
@@ -213,8 +224,10 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
 
         </div>
 
-        <div className="bg-gray-50 p-3 text-center border-t border-gray-100">
-           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Secured by M-Pesa</p>
+        <div className="bg-gray-50 py-3 text-center border-t border-gray-100">
+           <p className="text-[9px] text-gray-400 font-extrabold uppercase tracking-widest flex justify-center items-center gap-1.5">
+             Secured by M-Pesa
+           </p>
         </div>
 
       </div>
@@ -223,3 +236,4 @@ const MpesaModal = ({ post, onClose, onPaid }) => {
 };
 
 export default MpesaModal;
+

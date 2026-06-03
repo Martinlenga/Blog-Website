@@ -1,97 +1,144 @@
 import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
-import { FiClock, FiArrowRight } from "react-icons/fi"; 
+import { FiClock, FiArrowRight, FiCalendar } from "react-icons/fi"; 
 
+// 🚀 THE ULTIMATE BULLETPROOF IMAGE HANDLER
 const getImageUrl = (imagePath) => {
   if (!imagePath) return placeholder;
-  if (imagePath.startsWith("http")) return imagePath;
+  if (String(imagePath).startsWith("http")) return imagePath;
 
-  // Use the API URL, ensuring no '/api' suffix remains
-  const apiBase = process.env.REACT_APP_API_URL.replace(/\/api\/?$/, "");
+  let apiBase = "http://localhost:8000"; // Absolute fallback
   
-  // Ensure exactly one slash between base and path
-  const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  try {
+    if (typeof process !== "undefined" && process.env.REACT_APP_API_URL) {
+      apiBase = process.env.REACT_APP_API_URL;
+    } else if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) {
+      apiBase = import.meta.env.VITE_API_URL;
+    }
+  } catch (err) {
+    // Silently ignore bundler environment errors
+  }
+
+  // FORCE it to be a string. This guarantees .replace() will never, ever crash.
+  apiBase = String(apiBase).replace(/\/api\/?$/, "");
+  const cleanPath = String(imagePath).startsWith("/") ? imagePath : `/${imagePath}`;
   
   return `${apiBase}${cleanPath}`;
+};
+
+// 🚀 UX FIX: Format raw database strings into clean editorial dates
+const formatDate = (dateString) => {
+  if (!dateString) return "Recently Published";
+  try {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
 };
 
 const FeaturedPost = ({ post }) => {
   if (!post) return null;
 
   const imageUrl = getImageUrl(post.banner_image);
-
-  // Robust fallback for category (handles if it's an object or a string)
   const categoryName = post.category 
     ? (typeof post.category === 'object' ? post.category.name : post.category) 
-    : "Editorial";
+    : "Featured Read";
+
+  const priceValue = parseFloat(post.price || 0);
+  const isFree = isNaN(priceValue) || priceValue <= 0;
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-8">
-      <div className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 group">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+      
+      {/* 🚀 HTML FIX: The entire container is now a <Link>. 
+          This is much better for mobile tap targets. */}
+      <Link 
+        to={`/post/${post.slug}`}
+        className="flex flex-col lg:flex-row bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 group hover:shadow-xl transition-all duration-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+      >
         
-        {/* 1. LEFT SIDE: Image (40% width) */}
-        {/* Adjusted height to match content naturally */}
-        <div className="w-full md:w-[40%] h-56 md:h-auto relative overflow-hidden">
+        {/* 1. LEFT SIDE: Image (Pulled back to 42% width, max 380px tall) */}
+        <div className="w-full lg:w-[42%] h-60 sm:h-72 lg:h-[380px] relative overflow-hidden bg-gray-50 shrink-0">
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 to-transparent z-10 pointer-events-none transition-opacity duration-500 group-hover:opacity-0" />
           <img
             src={imageUrl}
             alt={post.title}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
         </div>
 
-        {/* 2. RIGHT SIDE: Content (60% width) */}
-        {/* Reduced padding for a more compact feel */}
-        <div className="w-full md:w-[60%] p-6 md:p-10 flex flex-col justify-center">
+        {/* 2. RIGHT SIDE: Content (Expanded to 58% width, balanced padding) */}
+        <div className="w-full lg:w-[58%] p-6 sm:p-8 lg:p-10 flex flex-col justify-between relative bg-white z-20">
           
-          {/* Top Labels */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-wider rounded">
-              Trending story
-            </span>
-            <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-               <span className="w-4 h-[1px] bg-gray-300"></span> 
-               {categoryName}
-            </span>
-          </div>
-
-          {/* Title */}
-          <h1 className="font-serif text-2xl md:text-4xl font-bold text-gray-900 leading-tight mb-3 group-hover:text-indigo-700 transition-colors">
-            {post.title}
-          </h1>
-
-          {/* Meta Info (MOVED UP) */}
-          <div className="flex items-center flex-wrap gap-3 text-xs font-semibold text-gray-500 mb-4">
-             <div className="flex items-center gap-1 text-gray-600">
-               <FiClock className="text-indigo-500" /> {post.reading_time || "5 min"}
-             </div>
-             <span className="text-gray-300">|</span>
-             <div className="text-gray-700">{post.author_name || "JK Team"}</div>
-             <span className="text-gray-300">|</span>
-             {post.price ? (
-               <span className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">PREMIUM</span>
-             ) : (
-               <span className="text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-100">FREE</span>
-             )}
-          </div>
-
-          {/* Description (Clamped to 2 lines to save height) */}
-          <p className="text-gray-500 text-sm md:text-base leading-relaxed mb-6 line-clamp-2">
-            {post.meta_description}
-          </p>
-
-          {/* Read Button Only */}
           <div>
-            <Link
-              to={`/post/${post.slug}`}
-              className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-600 transition-all shadow hover:shadow-lg hover:-translate-y-0.5"
-            >
-              Read Article <FiArrowRight />
-            </Link>
+            {/* Top Labels */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className="px-2.5 py-1 bg-indigo-600 text-white text-[9px] font-extrabold uppercase tracking-widest rounded shadow-sm">
+                Cover Story
+              </span>
+              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-600">
+                 <span className="w-4 h-[1px] bg-indigo-200"></span> 
+                 {categoryName}
+              </span>
+            </div>
+
+            {/* Title (Span instead of Link to prevent HTML nesting errors) */}
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-[1.15] mb-4 group-hover:text-indigo-600 transition-colors">
+              {post.title}
+            </h2>
+
+            {/* Meta Info */}
+            <div className="flex items-center flex-wrap gap-3 text-xs font-medium text-gray-400 mb-5">
+               <div className="flex items-center gap-1.5 text-gray-500">
+                 <FiCalendar className="text-gray-400" /> {formatDate(post.published_at || post.created_at)}
+               </div>
+               <span className="text-gray-200">|</span>
+               <div className="flex items-center gap-1.5 text-gray-500">
+                 <FiClock className="text-gray-400" /> {post.reading_time || "5 min read"}
+               </div>
+               {post.author_name && (
+                 <>
+                   <span className="text-gray-200 hidden sm:inline">|</span>
+                   <div className="text-gray-600 capitalize hidden sm:block">By {post.author_name}</div>
+                 </>
+               )}
+            </div>
+
+            {/* Excerpt */}
+            <p className="text-gray-600 text-sm lg:text-base leading-relaxed mb-6 line-clamp-3">
+              {post.content_preview || post.meta_description}
+            </p>
+          </div>
+
+          {/* Footer Action Row */}
+          <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
+            
+            {/* Fake Button (Span) to keep valid HTML inside the parent Link wrapper */}
+            <span className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm group-hover:bg-indigo-600 transition-all shadow-sm">
+              Read Story <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+            </span>
+
+            {/* Price Badge */}
+            {!isFree ? (
+              <div className="text-right">
+                <span className="block text-[8px] uppercase font-bold tracking-widest text-gray-400 mb-0.5">Premium</span>
+                <span className="text-base sm:text-lg font-serif font-extrabold text-gray-900">
+                  KES {priceValue.toLocaleString()}
+                </span>
+              </div>
+            ) : (
+              <span className="text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 font-bold text-[10px] uppercase tracking-wider">
+                Free Access
+              </span>
+            )}
           </div>
 
         </div>
-      </div>
+      </Link>
     </div>
   );
 };

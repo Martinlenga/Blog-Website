@@ -1,10 +1,18 @@
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // 🚀 UX OPTIMIZATION: Automatically close the mobile sidebar whenever the user 
+  // navigates to a new page. This eliminates the need to manually pass close functions 
+  // to every single Navigation Link inside the Sidebar component.
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen bg-[#F9FAFB] text-gray-900 font-sans overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
@@ -13,15 +21,16 @@ export default function AdminLayout() {
       {sidebarOpen && (
         <div 
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          aria-hidden="true" // 🔹 a11y: Tells screen readers to ignore this purely visual backdrop
         />
       )}
 
-      {/* Sidebar Component - Added toggleSidebar prop */}
+      {/* Sidebar Component */}
       <AdminSidebar 
         open={sidebarOpen} 
         toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        closeMobileSidebar={() => setSidebarOpen(false)} 
+        // We can safely remove closeMobileSidebar prop now since the useEffect handles it!
       />
 
       {/* Main Content Wrapper */}
@@ -34,11 +43,12 @@ export default function AdminLayout() {
         />
 
         {/* Scrollable Page View Boundary */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 scroll-smooth">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 scroll-smooth focus:outline-none" tabIndex="-1">
           <div className="max-w-7xl mx-auto min-h-full">
-             <Outlet />
+            <Outlet />
           </div>
         </main>
+        
       </div>
     </div>
   );

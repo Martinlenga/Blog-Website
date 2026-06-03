@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import Post, PaymentTransaction, Feedback, AdminAuditLog, AdminProfile, PostAccess
 
 
@@ -13,7 +15,7 @@ class AdminProfileSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source="user.last_name", required=False, allow_blank=True)
     bio = serializers.CharField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
-    # Add this flag field to handle the picture deletion
+    
     remove_profile_picture = serializers.BooleanField(write_only=True, required=False)
     profile_picture = serializers.ImageField(required=False, allow_null=True)
 
@@ -22,23 +24,29 @@ class AdminProfileSerializer(serializers.ModelSerializer):
         fields = ["username", "email", "first_name", "last_name", "bio", "phone", "profile_picture", "remove_profile_picture"]
 
     def update(self, instance, validated_data):
-        # 1. Handle profile picture removal
+        # 1. Handle profile picture removal flag
         if validated_data.pop("remove_profile_picture", False):
             instance.profile_picture = None
+            
+        # Prevent empty or falsey file payloads from accidentally clearing an existing image
+        if 'profile_picture' in validated_data and not validated_data['profile_picture']:
+            validated_data.pop('profile_picture')
         
-        # 2. Extract nested fields (email, first_name, last_name)
-        # These were mapped using source="user.email" etc.
+        # 2. BUG FIX: Extract dotted nested user data source dictionaries safely
+        user_data = validated_data.pop('user', {})
         user = instance.user
-        user_fields = ["email", "first_name", "last_name"]
         
-        for field in user_fields:
-            if field in validated_data:
-                setattr(user, field, validated_data.pop(field))
-        user.save()
+        user_fields_updated = False
+        for field in ["email", "first_name", "last_name"]:
+            if field in user_data:
+                setattr(user, field, user_data[field])
+                user_fields_updated = True
+                
+        if user_fields_updated:
+            user.save()
 
-        # 3. Update the rest of the AdminProfile fields
+        # 3. Securely update remaining fields on the profile instance itself
         return super().update(instance, validated_data)
-
 
 
 # -----------------------------
@@ -48,8 +56,9 @@ class AdminPasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate_email(self, value):
-        if not User.objects.filter(email=value, is_staff=True).exists():
-            raise serializers.ValidationError("No admin account found with this email.")
+        # Only permit active staff members to initiate password recovery flows
+        if not User.objects.filter(email__iexact=value, is_staff=True, is_active=True).exists():
+            raise serializers.ValidationError("No administrative account discovered matching this email address.")
         return value
 
 
@@ -59,12 +68,20 @@ class AdminPasswordResetRequestSerializer(serializers.Serializer):
 class AdminPasswordResetSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
-    new_password = serializers.CharField(min_length=8)
-    confirm_password = serializers.CharField(min_length=8)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
 
     def validate(self, attrs):
-        if attrs.get("new_password") != attrs.get("confirm_password"):
-            raise serializers.ValidationError("New password and confirmation do not match.")
+        new_pass = attrs.get("new_password")
+        if new_pass != attrs.get("confirm_password"):
+            raise serializers.ValidationError({"confirm_password": "New password and confirmation password fields must match perfectly."})
+        
+        # SECURITY FIX: Enforce your settings.py AUTH_PASSWORD_VALIDATORS policies
+        try:
+            validate_password(new_pass)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"new_password": list(e.messages)})
+            
         return attrs
 
 
@@ -74,8 +91,6 @@ class AdminPasswordResetSerializer(serializers.Serializer):
 class AdminPostSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(read_only=True, slug_field="username")
     conversion_rate = serializers.SerializerMethodField()
-    
-    # Explicitly allow banner_image to be a file upload
     banner_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
@@ -84,18 +99,27 @@ class AdminPostSerializer(serializers.ModelSerializer):
         read_only_fields = ["author", "slug", "created_at", "updated_at", "views", "reading_time_minutes", "conversion_rate"]
 
     def update(self, instance, validated_data):
-        # Prevent "empty" file objects from overwriting existing images
         if 'banner_image' in validated_data and not validated_data['banner_image']:
             validated_data.pop('banner_image')
             
         return super().update(instance, validated_data)
 
     def get_conversion_rate(self, obj):
-        # Prevent division by zero
-        if obj.views == 0:
+        """
+        PERFORMANCE OPTIMIZATION NOTE:
+        This runs a database count per article item. For heavy dashboard lists,
+        prefer to annotate the query count via the view using:
+        Post.objects.annotate(successful_purchases=Count('paymenttransaction', filter=Q(paymenttransaction__status='SUCCESS')))
+        """
+        if getattr(obj, 'views', 0) == 0:
             return "0.0%"
-        # Count successful payments for this post
-        purchases = PaymentTransaction.objects.filter(post=obj, status="SUCCESS").count()
+            
+        # Try leveraging view annotations first to save database performance overhead
+        if hasattr(obj, 'successful_purchases'):
+            purchases = obj.successful_purchases
+        else:
+            purchases = PaymentTransaction.objects.filter(post=obj, status="SUCCESS").count()
+            
         rate = (purchases / obj.views) * 100
         return f"{rate:.1f}%"
 
@@ -108,8 +132,7 @@ class AdminPostAccessSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostAccess
         fields = ["id", "post", "post_title", "post_category", "user_email", "granted_at"]
-        read_only_fields = fields  # everything read-only
-
+        read_only_fields = fields
 
 
 # -----------------------------
@@ -153,14 +176,12 @@ class AdminFeedbackSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["created_at", "updated_at"]
 
+
 # -----------------------------
 # Admin Audit Log
 # -----------------------------
 class AdminAuditLogSerializer(serializers.ModelSerializer):
-    admin_username = serializers.CharField(
-        source="admin.username",
-        read_only=True
-    )
+    admin_username = serializers.CharField(source="admin.username", read_only=True)
 
     class Meta:
         model = AdminAuditLog

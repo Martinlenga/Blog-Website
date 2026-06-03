@@ -1,30 +1,41 @@
-// src/admin/components/EmptyState.jsx
+import React from "react";
+import { SearchX } from "lucide-react"; // Using a consistent Lucide icon
+
 export default function EmptyState({
   title = "No data available",
   description = "",
-  icon = (
-    <svg
-      className="w-16 h-16 mb-4 text-gray-300"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M3 7h18M3 12h18M3 17h18"
-      />
-    </svg>
-  ),
-  children, // optional action buttons
+  icon,
+  children, // Optional action buttons
+  className = "", // Allow parents to pass min-heights or margin
 }) {
+  // Use the passed icon, or fallback to the standard SearchX icon
+  const displayIcon = icon || <SearchX size={32} strokeWidth={1.5} className="text-gray-400" />;
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-      {icon}
-      <h2 className="text-lg font-semibold text-gray-700 mb-1">{title}</h2>
-      {description && <p className="text-sm text-gray-400 mb-4">{description}</p>}
-      {children && <div className="mt-2">{children}</div>}
+    <div 
+      className={`w-full flex flex-col items-center justify-center p-8 sm:p-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 ${className}`}
+    >
+      {/* Icon Wrapper with a subtle pop effect */}
+      <div className="w-16 h-16 bg-white shadow-sm rounded-full flex items-center justify-center mb-4 border border-gray-100">
+        {displayIcon}
+      </div>
+      
+      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1.5">
+        {title}
+      </h3>
+      
+      {description && (
+        <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed mb-6">
+          {description}
+        </p>
+      )}
+      
+      {/* Renders any buttons passed into the component */}
+      {children && (
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

@@ -7,14 +7,21 @@ const AdminProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="h-screen w-full flex items-center justify-center bg-[#F3F4F6]">
+        {/* Added screen reader accessibility (a11y) to the loading state */}
+        <div 
+          className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"
+          role="status"
+          aria-label="Validating admin session..."
+        >
+          <span className="sr-only">Loading...</span>
+        </div>
       </div>
     );
   }
 
   if (!admin) {
-    // Redirect to login, but remember where they were trying to go
+    // Redirect to login, but remember exactly where they were trying to go
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 

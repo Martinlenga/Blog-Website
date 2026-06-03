@@ -1,42 +1,74 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import DOMPurify from 'dompurify'; 
+
+// 🚀 Helper function to safely process text
+const processContent = (rawContent) => {
+  if (!rawContent) return "";
+  
+  // 1. Sanitize the HTML first to prevent XSS
+  const cleanHtml = DOMPurify.sanitize(rawContent);
+  
+  // 2. Parse the string into an actual DOM tree
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
+  
+  // 3. Walk through ONLY the text nodes
+  const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null, false);
+  let node;
+  
+  while ((node = walker.nextNode())) {
+    // 🚀 SAFETY NET: Do NOT alter spacing inside code blocks!
+    if (node.parentElement && node.parentElement.closest('pre, code')) {
+      continue;
+    }
+
+    let text = node.nodeValue;
+
+    // 🚀 THE SPACE CRUSHER: 
+    // Finds any combination of standard spaces, tabs (\t), or non-breaking spaces (\u00A0)
+    // and collapses them into one single, standard space.
+    text = text.replace(/[ \t\u00A0]+/g, ' ');
+
+    // 🚀 THE HYPHEN FIX:
+    // Replace standard hyphens between letters with a Non-Breaking Hyphen (\u2011)
+    text = text.replace(/([a-zA-Z])-([a-zA-Z])/g, '$1\u2011$2');
+
+    node.nodeValue = text;
+  }
+  
+  // 4. Return the updated, safely processed HTML
+  return doc.body.innerHTML;
+};
 
 export default function ArticleBody({ content }) {
+  // useMemo ensures we only run this processing once when the content loads
+  const safeContent = useMemo(() => processContent(content), [content]);
+
   if (!content) return null;
 
   return (
     <div 
       className="
-        prose md:prose-lg max-w-none 
+        /* Base Prose Styling */
+        prose md:prose-lg max-w-none font-sans text-gray-800
         
-        /* 🔴 THE FIX: Justify text and enable smart hyphenation */
-        text-justify hyphens-auto
+        /* HEADINGS */
+        prose-headings:font-serif prose-headings:font-bold prose-headings:text-gray-900 
         
-        /* HEADINGS (Keep them left-aligned so they don't stretch weirdly) */
-        prose-headings:font-serif prose-headings:font-bold prose-headings:text-gray-900 prose-headings:text-left
+        /* PARAGRAPHS - Kept clean and breathable */
+        prose-p:leading-[1.8] prose-p:mb-5 prose-p:mt-0
         
-        /* PARAGRAPHS */
-        prose-p:text-gray-800 prose-p:leading-[1.65] prose-p:mb-4 prose-p:mt-0
+        /* LISTS & QUOTES - Beautiful editorial accents */
+        prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-gray-50/80 
+        prose-blockquote:p-6 prose-blockquote:rounded-r-2xl prose-blockquote:not-italic prose-blockquote:text-gray-700
         
-        /* LINKS */
-        prose-a:text-indigo-600 prose-a:font-semibold hover:prose-a:underline hover:prose-a:text-indigo-800 transition-colors
+        /* IMAGES - Neat and contained */
+        prose-img:rounded-2xl prose-img:shadow-sm prose-img:mx-auto
         
-        /* QUOTES */
-        prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-gray-50 prose-blockquote:p-6 prose-blockquote:rounded-r-2xl prose-blockquote:not-italic prose-blockquote:text-gray-800 prose-blockquote:font-medium prose-blockquote:text-left
-        
-        /* IMAGES */
-        prose-img:rounded-2xl prose-img:shadow-md prose-img:mx-auto
-        
-        /* LISTS */
-        prose-ul:list-disc prose-ul:pl-5 prose-li:text-gray-800 prose-li:my-1
-        prose-ol:list-decimal prose-ol:pl-5
-        
-        /* BOLD TEXT */
-        prose-strong:text-gray-900 prose-strong:font-extrabold
-        
-        /* REMOVE TOP SPACING ON FIRST ELEMENT */
+        /* Clean up top margin spacing */
         [&>*:first-child]:mt-0 
       "
-      dangerouslySetInnerHTML={{ __html: content }} 
+      dangerouslySetInnerHTML={{ __html: safeContent }} 
     />
   );
 }

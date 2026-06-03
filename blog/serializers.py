@@ -1,16 +1,15 @@
 from rest_framework import serializers
 from .models import Post, Feedback
 
-# --------------------------
-# Post detail serializer (single, includes full content)
-# --------------------------
-class PostDetailSerializer(serializers.ModelSerializer):
+# ---------------------------------------------------------
+# Post List Serializer (Strictly Teasers - NO CONTENT LEAK)
+# ---------------------------------------------------------
+class PostListSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.username", read_only=True)
     published_at = serializers.DateTimeField(source="created_at", format="%b %d, %Y")
     price = serializers.SerializerMethodField()
     reading_time = serializers.SerializerMethodField()
-    meta_description = serializers.CharField(read_only=True)
-    content_preview = serializers.SerializerMethodField()  # teaser only
+    content_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -18,8 +17,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "id",
             "slug",
             "title",
-            "content",          # full content included
-            "content_preview",  # teaser
+            "content_preview", 
             "author_name",
             "published_at",
             "category",
@@ -27,26 +25,38 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "featured",
             "price",
             "reading_time",
-            "meta_description",
-            "views",            # ⭐ NEW: Expose view count
+            "views",
         ]
 
     def get_content_preview(self, obj):
-        return obj.excerpt  # teaser
+        return obj.excerpt
 
     def get_price(self, obj):
         return f"{obj.price:.2f}"
 
     def get_reading_time(self, obj):
-        # ⭐ OPTIMIZATION: Use the stored DB value instead of recalculating
-        # Fallback to 1 minute if it happens to be 0
         minutes = obj.reading_time_minutes or 1
         return f"{minutes} min read"
 
 
-# --------------------------
-# Feedback serializer
-# --------------------------
+# ---------------------------------------------------------
+# Post Detail Serializer (Includes Gated Content)
+# ---------------------------------------------------------
+class PostDetailSerializer(PostListSerializer):
+    """
+    Inherits all formatting from PostListSerializer, but appends 
+    the heavy/gated fields needed only for the single-article view.
+    """
+    meta_description = serializers.CharField(read_only=True)
+
+    class Meta(PostListSerializer.Meta):
+        # Dynamically adds 'content' and 'meta_description' to the base list
+        fields = PostListSerializer.Meta.fields + ["content", "meta_description"]
+
+
+# ---------------------------------------------------------
+# Feedback Serializer
+# ---------------------------------------------------------
 class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
@@ -56,6 +66,10 @@ class FeedbackSerializer(serializers.ModelSerializer):
             "email",
             "rating",
             "comment",
-            "is_approved", # Helpful if you want to show "Pending Approval" to user
+            "is_approved",
             "created_at",
         ]
+        # 🚨 SECURITY FIX: Prevents public API from leaking customer emails to scrapers
+        extra_kwargs = {
+            'email': {'write_only': True}
+        }

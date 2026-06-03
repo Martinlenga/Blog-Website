@@ -9,7 +9,6 @@ from .models import (
     AdminAuditLog,
 )
 
-
 # =========================
 # ADMIN PROFILE
 # =========================
@@ -17,26 +16,23 @@ from .models import (
 class AdminProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "phone")
     search_fields = ("user__username", "user__email", "phone")
+    list_select_related = ("user",)  # Performance optimization
 
 
 # =========================
-# POSTS (Updated with Analytics & Drafts)
+# POSTS
 # =========================
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    # Added 'is_published', 'views', 'reading_time_minutes' to the list display
     list_display = ("title", "author", "featured", "is_published", "price", "views", "reading_time_minutes", "created_at")
-    
     prepopulated_fields = {"slug": ("title",)}
-    
-    # Added 'is_published' filter
     list_filter = ("featured", "is_published", "category", "created_at")
-    
-    search_fields = ("title", "excerpt", "content")
+    search_fields = ("title", "excerpt", "content", "author__username")
     ordering = ("-created_at",)
-    
-    # Make analytics fields read-only in the admin panel so they aren't manually edited by mistake
     readonly_fields = ("views", "reading_time_minutes", "created_at", "updated_at")
+    
+    # Prevents N+1 database queries when displaying the author column
+    list_select_related = ("author",)
 
 
 # =========================
@@ -44,13 +40,16 @@ class PostAdmin(admin.ModelAdmin):
 # =========================
 @admin.register(PostAccess)
 class PostAccessAdmin(admin.ModelAdmin):
-    list_display = ("user_email", "post", "granted_at")
+    list_display = ("get_user_email", "post", "granted_at")
     search_fields = ("user__email", "user__username", "post__title")
     list_filter = ("granted_at",)
+    
+    # Crucial for performance: Fetches User and Post in a single SQL JOIN
+    list_select_related = ("user", "post")
 
-    def user_email(self, obj):
+    @admin.display(ordering="user__email", description="User Email")
+    def get_user_email(self, obj):
         return obj.user.email
-    user_email.short_description = "User Email"
 
 
 # =========================
@@ -59,7 +58,7 @@ class PostAccessAdmin(admin.ModelAdmin):
 @admin.register(PaymentTransaction)
 class PaymentTransactionAdmin(admin.ModelAdmin):
     list_display = (
-        "user_email",
+        "get_user_email",
         "phone",
         "post",
         "amount",
@@ -75,10 +74,13 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
         "mpesa_receipt",
     )
     ordering = ("-created_at",)
+    
+    # Crucial for performance: Fetches User and Post in a single SQL JOIN
+    list_select_related = ("user", "post")
 
-    def user_email(self, obj):
+    @admin.display(ordering="user__email", description="User Email")
+    def get_user_email(self, obj):
         return obj.user.email
-    user_email.short_description = "User Email"
 
 
 # =========================
@@ -88,7 +90,7 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
 class FeedbackAdmin(admin.ModelAdmin):
     list_display = ("name", "rating", "is_approved", "created_at")
     list_filter = ("rating", "is_approved")
-    search_fields = ("name", "comment")
+    search_fields = ("name", "comment", "email")
     ordering = ("-created_at",)
 
 
@@ -100,6 +102,8 @@ class AdminAuditLogAdmin(admin.ModelAdmin):
     list_display = ("admin", "action", "model_name", "object_id", "timestamp")
     list_filter = ("action", "model_name", "timestamp")
     search_fields = ("admin__username", "model_name", "details")
+    list_select_related = ("admin",)
+    
     readonly_fields = (
         "admin",
         "action",
@@ -110,7 +114,14 @@ class AdminAuditLogAdmin(admin.ModelAdmin):
     )
     ordering = ("-timestamp",)
 
+    # -------------------------------------------------------------
+    # STRICT IMMUTABILITY ENFORCEMENT
+    # -------------------------------------------------------------
     def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # 🚨 Prevents admins from altering existing log entries
         return False
 
     def has_delete_permission(self, request, obj=None):

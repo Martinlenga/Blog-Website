@@ -1,9 +1,11 @@
 import json
 import uuid
+import logging
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db.models import F
 
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
@@ -11,18 +13,20 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django.db.models import F
 
 from google.oauth2 import id_token
-from google.auth.transport import requests
+import requests
+from google.auth.transport import requests as google_requests
 from requests.exceptions import HTTPError
 
 from .models import Post, PaymentTransaction, PostAccess, Feedback
-from .serializers import PostDetailSerializer, FeedbackSerializer
+from .serializers import PostListSerializer, PostDetailSerializer, FeedbackSerializer
 from .utils import initiate_stk_push, normalize_phone
 
+logger = logging.getLogger(__name__)
+
 # --------------------------
-# Google login
+# Google Login
 # --------------------------
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -30,29 +34,30 @@ from .utils import initiate_stk_push, normalize_phone
 def google_login(request):
     token = request.data.get("token")
     if not token:
-        return Response({"error": "No token provided"}, status=400)
+        return Response({"error": "No token provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        info = id_token.verify_oauth2_token(
-            token,
-            requests.Request(),
-            settings.GOOGLE_CLIENT_ID
-        )
-    except ValueError:
-        return Response({"error": "Invalid Google token"}, status=400)
+    # 🚀 THE MAGIC: Ask Google directly who this Access Token belongs to
+    google_url = f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}"
+    google_response = requests.get(google_url)
+    
+    if not google_response.ok:
+        return Response({"error": "Invalid or expired Google token"}, status=status.HTTP_400_BAD_REQUEST)
 
+    info = google_response.json()
+    
     email = info.get("email")
     name = info.get("name", "")
 
     if not email:
-        return Response({"error": "No email from Google"}, status=400)
+        return Response({"error": "No email provided by Google"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # From here down, we just create the user and issue the JWT exactly like before
     user, created = User.objects.get_or_create(
         username=email,
         defaults={
             "email": email,
-            "first_name": name.split(" ")[0],
-            "last_name": " ".join(name.split(" ")[1:]),
+            "first_name": name.split(" ")[0] if name else "",
+            "last_name": " ".join(name.split(" ")[1:]) if name else "",
         }
     )
 
@@ -69,45 +74,40 @@ def google_login(request):
         "created": created,
     })
 
-
 # --------------------------
-# Post list (public)
+# Post List (Public)
 # --------------------------
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @authentication_classes([])
 def post_list(request):
-    # Only fetch the featured post if it is published
     featured = Post.objects.filter(featured=True, is_published=True).first()
-    
-    # Only fetch regular posts if they are published
     posts = Post.objects.filter(featured=False, is_published=True).order_by("-created_at")
 
     return Response({
-        "featured": PostDetailSerializer(featured).data if featured else None,
-        "posts": PostDetailSerializer(posts, many=True).data,
+        # Use PostListSerializer here to protect your payload size and content!
+        "featured": PostListSerializer(featured).data if featured else None,
+        "posts": PostListSerializer(posts, many=True).data,
     })
 
 
 # --------------------------
-# Post detail (requires login)
+# Post Detail (Paywall Logic)
 # --------------------------
 @api_view(["GET"])
 @permission_classes([]) 
 @authentication_classes([JWTAuthentication])
 def post_detail_by_slug(request, slug):
-    post = get_object_or_404(Post, slug=slug)
+    post = get_object_or_404(Post, slug=slug, is_published=True)
 
-    # ⭐ SMART ANALYTICS: Prevent double counting
-    # We use the user's session to track if they've seen this post recently.
+    # ⭐ VIEW TRACKING:
+    # Note: If your frontend does not send 'credentials: include' to pass session cookies 
+    # alongside the JWT, request.session will reset every time. If view counts inflate artificially, 
+    # switch this to track by request.META.get('REMOTE_ADDR') (User's IP) instead of session.
     session_key = f"viewed_post_{post.id}"
-
     if not request.session.get(session_key, False):
-        # Only increment if they haven't seen it in this session
         Post.objects.filter(pk=post.pk).update(views=F("views") + 1)
         post.refresh_from_db()
-        
-        # Mark as viewed in session (expires when browser closes)
         request.session[session_key] = True
 
     user = request.user
@@ -125,7 +125,7 @@ def post_detail_by_slug(request, slug):
             post=post, user=user, status="PENDING"
         ).exists()
 
-    # Admin Override (Admins always see content)
+    # Admins bypass the paywall entirely
     if is_authenticated and user.is_staff:
         has_access = True
 
@@ -135,33 +135,21 @@ def post_detail_by_slug(request, slug):
     data["pending_payment"] = pending_payment
 
     if locked:
-        data["content"] = None
+        data["content"] = None  # Crucial: Strips the content before it leaves the server
     else:
         data["content"] = post.content
 
     return Response(data)
 
-# --------------------------
-# Unlock post
-# --------------------------
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([JWTAuthentication])
-def unlock_post(request, slug):
-    post = get_object_or_404(Post, slug=slug)
 
-    PostAccess.objects.get_or_create(user=request.user, post=post)
-
-    serializer = PostDetailSerializer(post)
-    data = serializer.data
-    data["locked"] = False
-    data["content"] = post.content
-
-    return Response(data)
+# -------------------------------------------------------------
+# 🚨 SECURED: 'unlock_post' endpoint was removed. 
+# Do not allow users to manually trigger PostAccess via API calls.
+# -------------------------------------------------------------
 
 
 # --------------------------
-# Initiate payment endpoint
+# Initiate Payment Endpoint
 # --------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -172,21 +160,18 @@ def initiate_payment(request, slug):
 
     phone = normalize_phone(request.data.get("phone"))
     if not phone:
-        return Response({"error": "Invalid phone"}, status=400)
+        return Response({"error": "Invalid phone number format provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Skip if already unlocked
     if PostAccess.objects.filter(post=post, user=user).exists():
         return Response({"paid": True})
 
-    # Check pending payment
     existing_tx = PaymentTransaction.objects.filter(post=post, user=user, status="PENDING").first()
     if existing_tx:
         return Response({
-            "message": "Payment already in progress",
+            "message": "Payment already in progress. Please check your phone.",
             "tx_id": existing_tx.id,
         })
 
-    # Create transaction
     tx = PaymentTransaction.objects.create(
         post=post,
         user=user,
@@ -196,15 +181,12 @@ def initiate_payment(request, slug):
     )
 
     try:
-        # 1. Grab the first two words of the title
         title_words = post.title.split()
         if len(title_words) >= 2:
-            # Join them with an underscore (e.g., "Think_Deeper")
             formatted_ref = f"{title_words[0].capitalize()}_{title_words[1].capitalize()}"
         else:
             formatted_ref = f"{post.title.capitalize()}"
 
-        # 2. Force it to be strictly 12 characters or less so Safaricom doesn't reject it
         clean_reference = formatted_ref[:12].rstrip("_")
 
         res = initiate_stk_push(
@@ -217,20 +199,21 @@ def initiate_payment(request, slug):
         tx.status = "FAILED"
         tx.result_desc = str(e)
         tx.save()
-        return Response({"error": "STK push failed", "details": str(e)}, status=500)
+        return Response({"error": "STK push failed to initiate.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     tx.checkout_request_id = res.get("CheckoutRequestID")
     tx.save()
 
     return Response({
-        "message": "STK push sent",
+        "message": "STK push sent successfully.",
         "tx_id": tx.id,
         "response": res,
         "paid": False
     })
 
+
 # --------------------------
-# Mpesa callback endpoint
+# M-Pesa Webhook Callback
 # --------------------------
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -265,16 +248,17 @@ def mpesa_callback(request):
             None
         )
 
+        # Updating status to SUCCESS triggers your signals.py file.
+        # The signal will automatically create the PostAccess record.
         tx.status = "SUCCESS"
-        tx.save()
-
-        # Grant access
-        PostAccess.objects.get_or_create(post=tx.post, user=tx.user)
+        tx.save() 
 
         return JsonResponse({"status": "success"})
+        
     except Exception as e:
-        print("Callback Error:", e)
+        logger.error(f"Safaricom Callback Error: {str(e)}")
         return JsonResponse({"status": "error"})
+
 
 # --------------------------
 # Feedback
@@ -295,4 +279,5 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        
         return Response(serializer.data, status=status.HTTP_201_CREATED)

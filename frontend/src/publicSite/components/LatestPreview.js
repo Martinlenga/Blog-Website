@@ -1,59 +1,65 @@
 import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
-import { FiClock, FiArrowRight, FiUser } from "react-icons/fi";
+import { FiClock, FiUser, FiCalendar } from "react-icons/fi";
 
+// 🚀 CRASH FIX: Safely grab the API URL without crashing if process.env is undefined
+// 🚀 BULLETPROOF IMAGE URL HANDLER
 const getImageUrl = (imagePath) => {
   if (!imagePath) return placeholder;
   if (imagePath.startsWith("http")) return imagePath;
 
-  // Use the API URL, ensuring no '/api' suffix remains
-  const apiBase = process.env.REACT_APP_API_URL.replace(/\/api\/?$/, "");
+  // 1. Force a string fallback so .replace() NEVER crashes
+  const rawApiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
   
-  // Ensure exactly one slash between base and path
+  // 2. Strip out /api if it exists
+  const apiBase = rawApiUrl.replace(/\/api\/?$/, "");
+  
+  // 3. Ensure clean slash separation
   const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
   
   return `${apiBase}${cleanPath}`;
 };
 
+
 const LatestPreview = ({ posts }) => {
   if (!posts || posts.length === 0) return null;
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pb-16">
+    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       
-      {/* HEADER */}
-      <div className="flex items-end justify-between mb-8">
+      {/* 🔹 HEADER */}
+      <div className="flex items-end justify-between mb-8 border-b border-gray-100 pb-5">
         <div>
-          <span className="text-indigo-600 font-bold tracking-widest text-xs uppercase mb-1 block">
-            Discover
-          </span>
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">
+              Discover
+            </span>
+          </div>
+          <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 leading-none tracking-tight">
             Latest Articles
           </h2>
         </div>
-        <Link 
-          to="/" 
-          className="hidden md:flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
-        >
-          View Archive <FiArrowRight />
-        </Link>
       </div>
 
       {/* THE GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
         {posts.map((post) => {
           
           const imageUrl = getImageUrl(post.banner_image);
-            
           const categoryName = post.category 
             ? (typeof post.category === 'object' ? post.category.name : post.category) 
             : "Editorial";
+
+          const priceValue = parseFloat(post.price || 0);
+          const isFree = isNaN(priceValue) || priceValue <= 0;
 
           return (
             <Link 
               to={`/post/${post.slug}`} 
               key={post.id} 
-              className="group relative block h-[400px] w-full rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500"
+              // 🚀 DESIGN FIX: Reduced height from 420px to a sleek 360px (320px on mobile)
+              className="group relative block h-80 sm:h-[360px] w-full rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
             >
               
               {/* 1. BACKGROUND IMAGE */}
@@ -61,83 +67,90 @@ const LatestPreview = ({ posts }) => {
                 <img
                   src={imageUrl}
                   alt={post.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
+                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 opacity-90"
                 />
               </div>
 
               {/* 2. THE CURTAIN (Dark Gradient) */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:via-black/50 transition-all duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:via-gray-900/80 transition-all duration-500" />
 
               {/* 3. TOP TAGS (Category & Price) */}
               <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
-                <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-sm">
+                <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded shadow-sm">
                   {categoryName}
                 </span>
-                {post.price && (
-                  <span className="bg-white text-black text-xs font-bold px-2 py-1 rounded shadow-lg">
-                    KES {post.price}
+                
+                {!isFree && (
+                  <span className="bg-white text-gray-900 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded shadow-lg">
+                    KES {priceValue.toLocaleString()}
                   </span>
                 )}
               </div>
 
               {/* 4. CONTENT CONTAINER */}
-              {/* FIXED: 'translate-y-[88px]' pushes the description down initially */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 z-30 transition-transform duration-500 transform translate-y-[88px] group-hover:translate-y-0">
-                
-                {/* TITLE AREA (Always Visible) */}
-                <div className="mb-2">
-                   
-                   {/* READING TIME - Always starts at the exact same pixel height */}
-                   <div className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-md border border-white/10 text-white px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mb-2">
-                    <FiClock className="text-indigo-400" /> 
-                    {post.reading_time || "5 Min"}
-                  </div>
+<div className="absolute inset-x-0 bottom-0 p-6 z-30">
 
-                  {/* FIXED HEIGHT TITLE */}
-                  {/* h-[3.6rem] forces exactly 2 lines of space. 
-                      flex items-start ensures title text starts from TOP of this box.
-                      This guarantees the 'Reading Time' badge above sits at the same spot for everyone. */}
-                  <h3 className="text-2xl font-bold text-white leading-tight drop-shadow-lg h-[3.6rem] line-clamp-2 flex items-start">
-                    {post.title}
-                  </h3>
-                </div>
+  {/* Inner wrapper controls animation */}
+  <div className="transform transition-all duration-500 translate-y-6 group-hover:translate-y-0">
 
-                {/* HIDDEN DETAILS (Only visible on hover) */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 flex flex-col gap-3">
-                  
-                  {/* Divider Line */}
-                  <div className="w-12 h-1 bg-indigo-500 mt-2 mb-2 rounded-full"></div>
+    {/* TITLE + BADGE */}
+    <div className="mb-3">
 
-                  {/* Fixed Height Description to prevent jumping */}
-                  <p className="text-gray-200 text-sm line-clamp-2 leading-relaxed font-medium drop-shadow-sm h-[2.5rem]">
-                    {post.meta_description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2 text-gray-300 text-xs font-semibold">
-                      <FiUser className="text-indigo-400"/>
-                      {post.author_name || "JK Team"}
-                    </div>
-                    <span className="text-white text-xs font-bold flex items-center gap-1 bg-white/20 px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors">
-                      Read Now <FiArrowRight />
-                    </span>
-                  </div>
-                </div>
+      <div className="inline-flex items-center gap-1.5 bg-black/60 text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest mb-3">
+        <FiClock className="text-indigo-400" />
+        {post.reading_time || "5 Min"}
+      </div>
 
-              </div>
+      <h3 className="font-serif text-2xl font-bold text-white leading-snug line-clamp-2">
+        {post.title}
+      </h3>
+    </div>
+
+    {/* HIDDEN CONTENT */}
+    <div
+      className="
+        max-h-0 opacity-0 overflow-hidden
+        group-hover:max-h-[180px] group-hover:opacity-100
+        transition-all duration-500 ease-in-out
+        flex flex-col gap-3
+      "
+    >
+
+      <div className="w-10 h-1 bg-indigo-500 rounded-full"></div>
+
+      <p className="text-gray-300 text-sm line-clamp-2">
+        {post.content_preview}
+      </p>
+
+      <div className="flex items-center justify-between pt-3 border-t border-white/10">
+
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1 text-gray-300 text-[10px] font-bold uppercase">
+            <FiUser className="text-indigo-400" />
+            {post.author_name || "JK Team"}
+          </div>
+
+          <div className="flex items-center gap-1 text-gray-400 text-[10px]">
+            <FiCalendar />
+            {post.published_at || "Recent"}
+          </div>
+        </div>
+
+        <span className="text-white text-[10px] font-extrabold uppercase bg-indigo-600 px-3 py-1.5 rounded hover:bg-indigo-500 transition-colors">
+          Read →
+        </span>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
             </Link>
           );
         })}
       </div>
-
-       {/* Mobile View All */}
-       <div className="mt-8 text-center md:hidden">
-        <Link to="/blog" className="inline-block border border-gray-300 text-gray-600 px-6 py-2 rounded-full font-bold text-sm">
-          View All Articles
-        </Link>
-      </div>
-
-    </div>
+    </section>
   );
 };
 

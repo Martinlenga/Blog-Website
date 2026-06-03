@@ -27,14 +27,14 @@ const FAQ = () => {
     <div className="max-w-3xl mx-auto">
       
       {/* Header */}
-      <div className="text-center mb-12">
+      <div className="text-center mb-10 md:mb-12">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
           <FiHelpCircle size={24} />
         </div>
         <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 mb-4">
           Frequently Asked Questions
         </h2>
-        <p className="text-gray-500 text-lg">
+        <p className="text-gray-500 text-base md:text-lg">
           Everything you need to know about the platform.
         </p>
       </div>
@@ -50,21 +50,23 @@ const FAQ = () => {
               className={`
                 border rounded-2xl transition-all duration-300 overflow-hidden
                 ${isOpen 
-                  ? "bg-white border-indigo-100 shadow-lg ring-1 ring-indigo-50" 
+                  ? "bg-white border-indigo-100 shadow-md ring-1 ring-indigo-50" 
                   : "bg-white border-gray-100 shadow-sm hover:border-indigo-100"
                 }
               `}
             >
               <button
                 onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="w-full flex items-center justify-between p-6 text-left focus:outline-none"
+                aria-expanded={isOpen}
+                aria-controls={`faq-answer-${idx}`}
+                className="w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset rounded-2xl"
               >
-                <span className={`text-lg font-bold font-serif transition-colors ${isOpen ? "text-indigo-900" : "text-gray-900"}`}>
+                <span className={`text-base md:text-lg font-bold font-serif transition-colors pr-4 ${isOpen ? "text-indigo-900" : "text-gray-900"}`}>
                   {faq.q}
                 </span>
                 <span
                   className={`
-                    w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
+                    shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
                     ${isOpen ? "bg-indigo-600 text-white rotate-180" : "bg-gray-100 text-gray-500"}
                   `}
                 >
@@ -72,15 +74,20 @@ const FAQ = () => {
                 </span>
               </button>
 
+              {/* 🚀 UX FIX: Grid-based animation prevents text clipping on mobile! */}
               <div
-                className={`transition-all duration-300 ease-in-out ${
-                  isOpen ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+                id={`faq-answer-${idx}`}
+                className={`grid transition-all duration-300 ease-in-out ${
+                  isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                 }`}
               >
-                <p className="px-6 pb-6 text-gray-600 leading-relaxed text-base">
-                  {faq.a}
-                </p>
+                <div className="overflow-hidden">
+                  <p className="px-5 md:px-6 pb-5 md:pb-6 text-gray-600 leading-relaxed text-sm md:text-base">
+                    {faq.a}
+                  </p>
+                </div>
               </div>
+              
             </div>
           );
         })}

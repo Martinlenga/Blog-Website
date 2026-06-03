@@ -21,3 +21,13 @@ npm-debug.log*
 # 💻 System files
 .DS_Store
 Thumbs.db
+
+# 📦 Virtual Environments
+venv/
+.venv/
+env/
+
+# 🛠 Editor & OS Files
+.vscode/
+.idea/
+*.swp
