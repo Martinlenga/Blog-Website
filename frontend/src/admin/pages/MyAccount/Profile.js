@@ -113,12 +113,21 @@ export default function Profile() {
       const res = await updateAdminProfile(formData);
       setProfile(res.data);
       
-      // Cache-bust safely (avoiding issues with S3/Cloudinary presigned URLs if used later)
-      const newImgUrl = getImageUrl(res.data.profile_picture);
-      const separator = newImgUrl.includes('?') ? '&' : '?';
-      setPreviewImage(`${newImgUrl}${separator}t=${Date.now()}`);
+      // 🚀 THE FIX: Smart Preview Handling
+      // If we uploaded a file, the `previewImage` is already a perfect `blob:` URL.
+      // We DO NOT overwrite it. It prevents flickering and stale-image bugs.
+      if (removePicture) {
+        setPreviewImage(getImageUrl(null)); // Show the default avatar
+      } else if (!(profile.profile_picture instanceof File)) {
+        // They didn't upload a new file (just updated text). Safe to refresh the server image.
+        const newImgUrl = getImageUrl(res.data.profile_picture);
+        const separator = newImgUrl.includes('?') ? '&' : '?';
+        setPreviewImage(`${newImgUrl}${separator}t=${Date.now()}`);
+      }
       
-      await refreshAdmin();
+      // This will still run and quietly update the Topbar in the background!
+      await refreshAdmin(); 
+      
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
     } catch (err) {

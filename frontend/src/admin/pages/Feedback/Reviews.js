@@ -9,6 +9,7 @@ import TableToolbar from "../../components/TableToolbar";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import EmptyState from "../../components/EmptyState";
 import { TableSkeleton } from "../../components/Skeleton";
+import NewDataBadge from '../../components/NewDataBadge';
 
 import { Trash2, CheckCircle, XCircle, Star, MessageSquare, Mail, X, Calendar, ChevronDown } from "lucide-react";
 
@@ -31,12 +32,17 @@ export default function Reviews() {
   const [deleteId, setDeleteId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // 🚀 NOTIFICATION STATE
+  const [hasNewItems, setHasNewItems] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to force a manual refresh
+
   // 🚀 PERFORMANCE FIX: Proper Debounced API Fetching
   useEffect(() => {
     let isMounted = true;
 
     const fetchFeedback = async () => {
-      setLoading(true);
+      // Only show the hard loading spinner if it's the very first load or a filter change
+      if (feedbacks.length === 0 || search) setLoading(true); 
       try {
         const { data } = await getAdminFeedback({ 
           page, 
@@ -48,6 +54,7 @@ export default function Reviews() {
         if (isMounted) {
           setFeedbacks(data.results || []);
           setCount(data.count || 0);
+          setHasNewItems(false); // Clear the badge automatically if a natural fetch happens
         }
       } catch (err) { 
         if (isMounted) console.error(err); 
@@ -56,17 +63,52 @@ export default function Reviews() {
       }
     };
 
-    // Wait 300ms after the user stops typing/clicking before hitting the API
     const timer = setTimeout(() => { 
       fetchFeedback(); 
     }, 300);
 
-    // If a new dependency changes BEFORE 300ms, clear the old timer
     return () => {
       clearTimeout(timer);
       isMounted = false;
     };
-  }, [page, search, statusFilter, ratingFilter]);
+  // 👇 Added refreshTrigger here so clicking the badge fires this effect again
+  }, [page, search, statusFilter, ratingFilter, refreshTrigger]); 
+
+  // 🚀 THE SILENT POLLER
+  useEffect(() => {
+    // We only want to poll if the user is looking at the newest stuff (Page 1, no search)
+    if (page !== 1 || search) return;
+
+    const interval = setInterval(async () => {
+      try {
+        // We only fetch 1 item just to check the ID. Very light on the Contabo server!
+        const { data } = await getAdminFeedback({ 
+          page: 1, 
+          pageSize: 1, 
+          is_approved: statusFilter, 
+          rating: ratingFilter 
+        });
+        
+        const latestServerItem = data.results[0];
+        const latestLocalItem = feedbacks[0];
+
+        // If the server has a newer item than what is on the screen, pop the badge!
+        if (latestServerItem && latestLocalItem && latestServerItem.id !== latestLocalItem.id) {
+          setHasNewItems(true);
+        }
+      } catch (err) { 
+        // Fail silently
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [feedbacks, page, search, statusFilter, ratingFilter]);
+
+  // Handle Badge Click
+  const handleRefreshClick = () => {
+    setHasNewItems(false);
+    setRefreshTrigger(prev => prev + 1); // This tells the main useEffect to run again!
+  };
 
   // Handle Approve/Unapprove
   const handleToggleStatus = async (fb) => {
@@ -116,6 +158,12 @@ export default function Reviews() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
       <Helmet><title>Community Reviews | JK Admin</title></Helmet>
+
+      <NewDataBadge 
+        show={hasNewItems} 
+        onClick={handleRefreshClick} 
+        label="New reviews available" 
+      />
       
       <div className="mb-6 sm:mb-8 border-b border-gray-100 pb-5">
         <h1 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Community Reviews</h1>

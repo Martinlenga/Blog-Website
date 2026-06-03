@@ -11,7 +11,10 @@ export default function AdminLayout() {
   // navigates to a new page. This eliminates the need to manually pass close functions 
   // to every single Navigation Link inside the Sidebar component.
   useEffect(() => {
-    setSidebarOpen(false);
+    // Only auto-close the sidebar if the user is on a small screen!
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false); 
+    }
   }, [location.pathname]);
 
   return (

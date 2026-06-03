@@ -8,6 +8,7 @@ import Pagination from "../../components/Pagination";
 import EmptyState from "../../components/EmptyState";
 import StatusBadge from "../../components/StatusBadge";
 import { TableSkeleton } from "../../components/Skeleton";
+import NewDataBadge from "../../components/NewDataBadge"; // 🚀 Import the badge
 
 import { Tag, User, Shield, Activity, Clock } from "lucide-react";
 
@@ -26,7 +27,11 @@ export default function PostAccess() {
   const [pageCount, setPageCount] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Helper for filter resets to fix the Double-Fetch Pagination Bug
+  // 🚀 NOTIFICATION STATE
+  const [hasNewItems, setHasNewItems] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Helper for filter resets
   const handleFilterChange = (setter, value) => {
     setter(value);
     setPage(1);
@@ -55,13 +60,14 @@ export default function PostAccess() {
     let isMounted = true;
 
     const fetchData = async () => {
-      setLoading(true);
+      if (data.length === 0 || search) setLoading(true);
       try {
         const res = await getAdminPostAccess({ page, search, category, date_range: dateRange });
         if (isMounted) {
           setData(res.data.results || []);
           setTotalCount(res.data.count || 0);
           setPageCount(Math.max(Math.ceil((res.data.count || 0) / 10), 1));
+          setHasNewItems(false); // Clear badge on natural fetch
         }
       } catch (err) {
         if (isMounted) console.error(err);
@@ -78,13 +84,53 @@ export default function PostAccess() {
       clearTimeout(timer);
       isMounted = false;
     };
-  }, [page, search, category, dateRange]);
+  // 👇 Added refreshTrigger
+  }, [page, search, category, dateRange, refreshTrigger]);
+
+  // 🚀 THE SILENT POLLER
+  useEffect(() => {
+    if (page !== 1 || search) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await getAdminPostAccess({ 
+          page: 1, 
+          search, 
+          category, 
+          date_range: dateRange 
+        });
+        
+        const latestServerItem = res.data.results[0];
+        const latestLocalItem = data[0];
+
+        // Assuming post access records have an 'id'. If they use something else like 'slug', change .id to .slug
+        if (latestServerItem && latestLocalItem && latestServerItem.id !== latestLocalItem.id) {
+          setHasNewItems(true);
+        }
+      } catch (err) {
+        // Fail silently
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [data, page, search, category, dateRange]);
+
+  const handleRefreshClick = () => {
+    setHasNewItems(false);
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
       <Helmet>
         <title>Access Logs | JK Admin</title>
       </Helmet>
+
+      <NewDataBadge 
+        show={hasNewItems} 
+        onClick={handleRefreshClick} 
+        label="New access logs available" 
+      />
       
       {/* HEADER META ROW */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 border-b border-gray-100 pb-5">

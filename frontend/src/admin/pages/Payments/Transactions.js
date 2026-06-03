@@ -8,6 +8,7 @@ import TableToolbar from "../../components/TableToolbar";
 import StatusBadge from "../../components/StatusBadge";
 import EmptyState from "../../components/EmptyState";
 import { TableSkeleton } from "../../components/Skeleton";
+import NewDataBadge from "../../components/NewDataBadge"; // 🚀 Import the badge
 
 import { Download, Clock, FileText, Smartphone, ChevronDown, CreditCard } from "lucide-react";
 
@@ -24,12 +25,17 @@ export default function Transactions() {
 
   const pageSize = 10;
 
+  // 🚀 NOTIFICATION STATE
+  const [hasNewItems, setHasNewItems] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   // 🚀 PERFORMANCE FIX: Debounced fetch with unmount protection
   useEffect(() => {
     let isMounted = true;
 
     const fetchPayments = async () => {
-      setLoading(true);
+      // Only show hard loading spinner if it's the first load or user is searching
+      if (payments.length === 0 || search) setLoading(true);
       try {
         const { data } = await getAdminPayments({
           page, pageSize, search, status: statusFilter, ordering: "-created_at"
@@ -37,6 +43,7 @@ export default function Transactions() {
         if (isMounted) {
           setPayments(data.results || []);
           setCount(data.count || 0);
+          setHasNewItems(false); // Clear badge on natural fetch
         }
       } catch (err) {
         if (isMounted) console.error(err);
@@ -53,7 +60,38 @@ export default function Transactions() {
       clearTimeout(timer);
       isMounted = false;
     };
-  }, [page, search, statusFilter]);
+  // 👇 Added refreshTrigger to dependencies
+  }, [page, search, statusFilter, refreshTrigger]); 
+
+  // 🚀 THE SILENT POLLER
+  useEffect(() => {
+    // Only poll if the user is looking at the top of the default list
+    if (page !== 1 || search) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await getAdminPayments({
+          page: 1, pageSize: 1, status: statusFilter, ordering: "-created_at"
+        });
+        
+        const latestServerItem = data.results[0];
+        const latestLocalItem = payments[0];
+
+        if (latestServerItem && latestLocalItem && latestServerItem.id !== latestLocalItem.id) {
+          setHasNewItems(true);
+        }
+      } catch (err) {
+        // Fail silently
+      }
+    }, 30000); 
+
+    return () => clearInterval(interval);
+  }, [payments, page, search, statusFilter]);
+
+  const handleRefreshClick = () => {
+    setHasNewItems(false);
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -78,6 +116,12 @@ export default function Transactions() {
       <Helmet>
         <title>Transactions | JK Admin</title>
       </Helmet>
+
+      <NewDataBadge 
+        show={hasNewItems} 
+        onClick={handleRefreshClick} 
+        label="New payments received"
+      />
       
       {/* HEADER ACTION ROW */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 sm:mb-8 gap-4 border-b border-gray-100 pb-5">
