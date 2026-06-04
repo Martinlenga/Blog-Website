@@ -6,16 +6,14 @@ import { FaTwitter, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
 
 import { getPostBySlug, pollPostUnlock, googleLogin } from "../services/api";
 import { useAuth } from "../../auth/PublicAuthContext";
-import useFacebookSDK from "../hooks/useFacebookSDK";
 import MpesaModal from "../components/MpesaModal";
 import ArticleBody from "../components/ArticleBody"; 
 import { useGoogleLogin } from '@react-oauth/google';
 
-// 🚀 CRITICAL: We import Quill's CSS here so that any alignment classes (like ql-align-center) 
 // saved from the admin editor actually render correctly on the public UI.
 import 'react-quill-new/dist/quill.snow.css'; 
 
-import FacebookComments from "../components/FacebookComments"; 
+import PostComments from "../components/PostComments"; 
 
 const formatDate = (dateString) => {
   if (!dateString) return "Recently Published";
@@ -39,7 +37,6 @@ const PostDetail = () => {
   const [error, setError] = useState("");
   const [showMpesa, setShowMpesa] = useState(false);
 
-  useFacebookSDK(); 
   const hasFetched = useRef(false);
 
   const fetchPost = useCallback(async () => {
@@ -322,14 +319,9 @@ const PostDetail = () => {
                </div>
             </div>
 
-            <div className="bg-gray-50 rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-inner">
-               <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-                 <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span> Discussion
-               </h3>
-               
-               <FacebookComments url={postUrl} />
-
-            </div>
+            {/* 🚀 CLEAN, NATIVE COMMENTS SECTION */}
+            <PostComments postSlug={post.slug} />
+            
           </div>
         )}
       </article>

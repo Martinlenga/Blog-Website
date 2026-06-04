@@ -177,3 +177,22 @@ class AdminAuditLog(models.Model):
 
     def __str__(self):
         return f"{self.admin.username} - {self.action}"
+    
+class PostComment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")
+    # Link to the user if they are logged in via Google Auth
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    # Fallback name for guest commenters
+    name = models.CharField(max_length=100, blank=True)
+    content = models.TextField()
+    
+    # Security: Set to False if the client wants to manually approve every comment
+    is_approved = models.BooleanField(default=True) 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at'] # Newest comments show up first
+
+    def __str__(self):
+        author = self.name or (self.user.username if self.user else "Anonymous")
+        return f"{author} on {self.post.title}"

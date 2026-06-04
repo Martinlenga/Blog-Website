@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import imageCompression from 'browser-image-compression';
-import { X, Loader, CheckCircle, Upload, Image as ImageIcon, Settings } from "lucide-react";
+import { Loader, CheckCircle, Upload, Image as ImageIcon, Settings } from "lucide-react";
 import { createAdminPost, updateAdminPost } from "../services/adminApi";
 import placeholder from "../../assets/article-placeholder.jpg"; 
 

@@ -62,10 +62,14 @@ export const fetchWithAuth = async (url, options = {}, retry = true) => {
       });
       const refreshData = await handleResponse(refreshRes);
       localStorage.setItem("jwt", refreshData.access);
-      return fetchWithAuth(url, options, false); // Retry once
+      return fetchWithAuth(url, options, false); 
     } catch {
-      localStorage.clear();
-      throw new Error("Session expired");
+      // 🚀 THE CRASH FIX: Quietly remove the bad tokens and fetch as a public guest
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      
+      return fetchPublic(url, options); // Fetch without auth so the page doesn't crash!
     }
   }
   return handleResponse(res);
@@ -126,3 +130,16 @@ export const submitFeedback = async (articleId, payload) =>
     method: "POST",
     body: JSON.stringify({ post: articleId, ...payload }),
   });
+
+ 
+/* ===================== POST COMMENTS ===================== */  
+export const getPostComments = async (slug) => {
+  return await fetchPublic(`${API_BASE}/posts/${slug}/comments/`);
+};
+
+export const submitPostComment = async (slug, commentData) => {
+  return await fetchWithAuth(`${API_BASE}/posts/${slug}/comments/`, {
+    method: "POST",
+    body: JSON.stringify(commentData)
+  });
+};

@@ -33,6 +33,7 @@ from .models import (
     AdminAuditLog,
     AdminProfile,
     PostAccess,
+    PostComment
 )
 from .admin_serializers import (
     AdminPostSerializer,
@@ -43,9 +44,12 @@ from .admin_serializers import (
     AdminPasswordResetRequestSerializer,
     AdminPasswordResetSerializer,
     AdminPostAccessSerializer,
+    AdminPostCommentSerializer
 )
 from .pagination import AdminPagination
 
+from rest_framework import generics, permissions, status
+from django.db.models import Q
 
 # -------------------------
 # Admin Profile
@@ -521,3 +525,58 @@ class AdminAuditLogViewSet(ReadOnlyModelViewSet):
     search_fields = ["admin__username", "model_name", "details"]
     ordering_fields = ["timestamp", "action", "model_name"]
     ordering = ["-timestamp"]
+
+
+# -------------------------
+# Post Comments
+# -------------------------
+class AdminCommentListView(generics.ListAPIView):
+    serializer_class = AdminPostCommentSerializer
+    permission_classes = [permissions.IsAdminUser] 
+
+    pagination_class = AdminPagination
+    
+    def get_queryset(self):
+        queryset = PostComment.objects.all().order_by('-created_at')
+        
+        post_id = self.request.query_params.get('post')
+        is_approved = self.request.query_params.get('is_approved')
+        search = self.request.query_params.get('search')
+
+        if post_id:
+            queryset = queryset.filter(post_id=post_id)
+            
+        # 🚀 THE FIX: Make sure we also check that it is not an empty string!
+        if is_approved is not None and is_approved != "":
+            approved_bool = str(is_approved).lower() in ['true', '1', 't']
+            queryset = queryset.filter(is_approved=approved_bool)
+            
+        if search:
+            queryset = queryset.filter(
+                Q(content__icontains=search) | Q(name__icontains=search)
+            )
+
+        return queryset
+
+class AdminCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Handles fetching a single comment, updating it (e.g., toggling is_approved), or deleting it.
+    """
+    queryset = PostComment.objects.all()
+    serializer_class = AdminPostCommentSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class AdminCommentApproveView(APIView):
+    """
+    A specific endpoint just for quickly approving a comment with one click.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, pk):
+        try:
+            comment = PostComment.objects.get(pk=pk)
+            comment.is_approved = True
+            comment.save()
+            return Response({"message": "Comment securely approved."}, status=status.HTTP_200_OK)
+        except PostComment.DoesNotExist:
+            return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)

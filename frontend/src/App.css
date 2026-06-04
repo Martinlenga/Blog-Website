@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-text-size-adjust: 100%;
+}
+
 /* Fix React Quill height and borders */
 .ql-container {
   min-height: 350px;
@@ -16,4 +23,3 @@
 .ql-container.ql-snow {
   border: none !important;
 }
-

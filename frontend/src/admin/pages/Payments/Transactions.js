@@ -60,7 +60,7 @@ export default function Transactions() {
       clearTimeout(timer);
       isMounted = false;
     };
-  // 👇 Added refreshTrigger to dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, statusFilter, refreshTrigger]); 
 
   // 🚀 THE SILENT POLLER

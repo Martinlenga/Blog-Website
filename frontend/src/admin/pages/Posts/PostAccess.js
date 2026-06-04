@@ -84,7 +84,7 @@ export default function PostAccess() {
       clearTimeout(timer);
       isMounted = false;
     };
-  // 👇 Added refreshTrigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, category, dateRange, refreshTrigger]);
 
   // 🚀 THE SILENT POLLER

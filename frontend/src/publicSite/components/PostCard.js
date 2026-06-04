@@ -5,16 +5,27 @@ import placeholder from "../../assets/article-placeholder.jpg";
 const getBaseUrl = () => {
   if (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
   if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  try { return import.meta.env.VITE_API_URL; } catch (e) {}
-  return "http://localhost:8000";
+  try { if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL; } catch (e) {}
+  
+  // 🚀 FIX 1: The absolute fallback must be your production server, not localhost!
+  return "https://api.ithaguru.co.ke/api";
 };
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return placeholder;
-  if (imagePath.startsWith("http")) return imagePath;
+
+  // 🚀 FIX 2: THE DATABASE TRAP INTERCEPTOR
+  // Force it to a string and rip out localhost if it was accidentally saved in the database
+  let safePath = String(imagePath);
+  if (safePath.includes("localhost:8000")) {
+    safePath = safePath.replace("http://localhost:8000", "");
+  }
+
+  // If it's a valid external HTTP link (like Unsplash) after the cleanup, return it directly
+  if (safePath.startsWith("http")) return safePath;
 
   const apiBase = getBaseUrl().replace(/\/api\/?$/, "");
-  const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  const cleanPath = safePath.startsWith("/") ? safePath : `/${safePath}`;
   
   return `${apiBase}${cleanPath}`;
 };
@@ -23,6 +34,7 @@ const PostCard = ({ post }) => {
   if (!post) return null;
   
   const imageUrl = getImageUrl(post.banner_image);
+  
 
   return (
     // 🚀 UX FIX: The entire card is now the Link, making it fully clickable.

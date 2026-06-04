@@ -7,6 +7,7 @@ from .models import (
     Feedback,
     AdminProfile,
     AdminAuditLog,
+    PostComment
 )
 
 # =========================
@@ -126,3 +127,16 @@ class AdminAuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+    
+# =========================
+# POST COMMENTS
+# =========================
+@admin.register(PostComment)
+class PostCommentAdmin(admin.ModelAdmin):
+    list_display = ("name", "post", "is_approved", "created_at")
+    list_filter = ("is_approved", "created_at")
+    search_fields = ("name", "content", "post__title", "user__email")
+    ordering = ("-created_at",)
+    
+    # 🚀 Crucial for performance: Prevents N+1 queries by fetching the related Post and User in one go
+    list_select_related = ("post", "user")

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Post, PaymentTransaction, Feedback, AdminAuditLog, AdminProfile, PostAccess
+from .models import Post, PaymentTransaction, Feedback, AdminAuditLog, AdminProfile, PostAccess, PostComment
 
 
 # -----------------------------
@@ -187,3 +187,19 @@ class AdminAuditLogSerializer(serializers.ModelSerializer):
         model = AdminAuditLog
         fields = "__all__"
         read_only_fields = ["admin", "timestamp"]
+
+# -----------------------------
+# Admin PostComment
+# -----------------------------
+class AdminPostCommentSerializer(serializers.ModelSerializer):
+    # Pull in the post title so your React table doesn't just show a generic Post ID
+    post_title = serializers.CharField(source='post.title', read_only=True)
+    post_slug = serializers.CharField(source='post.slug', read_only=True)
+    author_email = serializers.EmailField(source='user.email', read_only=True, default=None)
+
+    class Meta:
+        model = PostComment
+        fields = [
+            'id', 'post', 'post_title', 'post_slug', 'user', 'author_email', 
+            'name', 'content', 'is_approved', 'created_at'
+        ]

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Helmet } from "react-helmet";
 import { FiSearch, FiLoader } from "react-icons/fi"; 
 
@@ -17,6 +17,9 @@ const Home = () => {
   const [filteredPosts, setFilteredPosts] = useState([]);
   
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 🚀 REF for auto-scroll functionality
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -34,15 +37,13 @@ const Home = () => {
     fetchPosts();
   }, []);
 
-  // 🚀 THE FIX: Smarter Search Filtering
+  // 🚀 SEARCH FILTERING & AUTO-SCROLL
   useEffect(() => {
     if (!searchTerm.trim()) {
-      // If no search, just show the normal grid (LatestPreview handles 'latest' only)
       setFilteredPosts(latest);
       return;
     }
     
-    // Create a master pool of ALL articles so the featured post doesn't get left out
     const allSearchablePosts = featured ? [featured, ...latest] : latest;
     
     const filtered = allSearchablePosts.filter((post) =>
@@ -50,7 +51,15 @@ const Home = () => {
     );
     
     setFilteredPosts(filtered);
-  }, [searchTerm, latest, featured]); // Added 'featured' as a dependency
+
+    // Auto-scroll to results if searching
+    if (resultsRef.current) {
+      const yOffset = -80; 
+      const element = resultsRef.current;
+      const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }, [searchTerm, latest, featured]);
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-20 overflow-x-hidden">
@@ -78,26 +87,26 @@ const Home = () => {
 
         {/* SEARCH BAR */}
         <div className="absolute bottom-8 md:bottom-12 left-0 right-0 px-6 flex justify-center z-20">
-  <div className="relative w-full max-w-md md:max-w-lg group animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-    <label htmlFor="article-search" className="sr-only">
-      Search articles
-    </label>
+          <div className="relative w-full max-w-md md:max-w-lg group animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+            <label htmlFor="article-search" className="sr-only">
+              Search articles
+            </label>
 
-    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition-colors">
-      <FiSearch size={20} />
-    </div>
+            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition-colors">
+              <FiSearch size={20} />
+            </div>
 
-    <input
-      id="article-search"
-      name="article-search"
-      type="text"
-      placeholder="Search for articles today..."
-      className="w-full pl-12 pr-5 py-3.5 md:py-4 rounded-full bg-white/95 backdrop-blur-xl border border-white/40 shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all text-gray-900 text-sm md:text-base font-medium placeholder-gray-500"
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-    />
-  </div>
-</div>
+            <input
+              id="article-search"
+              name="article-search"
+              type="text"
+              placeholder="Search for articles today..."
+              className="w-full pl-12 pr-5 py-3.5 md:py-4 rounded-full bg-white/95 backdrop-blur-xl border border-white/40 shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all text-gray-900 text-sm md:text-base font-medium placeholder-gray-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
       </section>
 
       {/* DYNAMIC CONTENT AREA */}
@@ -109,7 +118,6 @@ const Home = () => {
       ) : (
         <>
           {/* FEATURED POST */}
-          {/* Still hides during search so users don't have to scroll past it to see results */}
           {featured && !searchTerm && (
             <section className="px-4 sm:px-6 md:px-12 mb-10 max-w-7xl mx-auto animate-in fade-in duration-700">
               <FeaturedPost post={featured} />
@@ -117,7 +125,7 @@ const Home = () => {
           )}
 
           {/* LATEST / SEARCH RESULTS */}
-          <section className="mb-8 min-h-[400px]">
+          <section ref={resultsRef} className="mb-8 min-h-[400px] pt-4">
             {filteredPosts.length > 0 ? (
               <div className="animate-in fade-in duration-500">
                 <LatestPreview posts={filteredPosts} />

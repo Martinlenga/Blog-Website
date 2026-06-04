@@ -16,6 +16,8 @@ const Transactions = lazy(() => import("../pages/Payments/Transactions"));
 const FinancialTrends = lazy(() => import("../pages/Payments/FinancialTrends"));
 const Reviews = lazy(() => import("../pages/Feedback/Reviews"));
 const FeedbackAnalytics = lazy(() => import("../pages/Feedback/Analytics"));
+const CommentsList = lazy(() => import("../pages/Feedback/CommentsList"));
+
 const AuditLogs = lazy(() => import("../pages/System/AuditLogs"));
 const Profile = lazy(() => import("../pages/MyAccount/Profile"));
 const ChangePassword = lazy(() => import("../pages/MyAccount/ChangePassword"));
@@ -57,9 +59,10 @@ export default function AdminRoutes() {
               <Route path="payments" element={<Transactions />} />
               <Route path="payments/trends" element={<FinancialTrends />} />
 
-              {/* Feedback */}
+              {/* Feedback & Comments */}
               <Route path="feedback" element={<Reviews />} />
               <Route path="feedback/analytics" element={<FeedbackAnalytics />} />
+              <Route path="feedback/comments" element={<CommentsList />} />
 
               {/* System */}
               <Route path="system/audit-logs" element={<AuditLogs />} />

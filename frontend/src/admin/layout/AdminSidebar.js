@@ -41,7 +41,12 @@ export default function AdminSidebar({ open = false, toggleSidebar }) {
     { key: "dashboard", label: "Dashboard", icon: Home, items: [{ label: "Overview", path: "/admin/dashboard/overview" }] },
     { key: "posts", label: "Content", icon: FileText, items: [{ label: "All Articles", path: "/admin/posts", end: true }, { label: "Access Control", path: "/admin/posts/access" }] },
     { key: "payments", label: "Finance", icon: DollarSign, items: [{ label: "Transactions", path: "/admin/payments", end: true }, { label: "Trends", path: "/admin/payments/trends" }] },
-    { key: "feedback", label: "Feedback", icon: MessageSquare, items: [{ label: "Reviews", path: "/admin/feedback", end: true }, { label: "Analytics", path: "/admin/feedback/analytics" }] },
+    { key: "feedback", label: "Feedback", icon: MessageSquare, items: [
+      { label: "Site Reviews", path: "/admin/feedback", end: true }, 
+      { label: "Analytics", path: "/admin/feedback/analytics" },
+      { label: "Post Comments", path: "/admin/feedback/comments" }
+    ]},
+    
     { key: "system", label: "System", icon: Folder, items: [{ label: "Audit Logs", path: "/admin/system/audit-logs" }] },
   ];
 

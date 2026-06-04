@@ -91,8 +91,6 @@ export const adminLogout = (refresh) => API.post("logout/", { refresh });
 export const getDashboardStats = () => API.get("dashboard/");
 export const getAdminPosts = (params) => API.get("posts/", { params });
 export const getAdminPostBySlug = (slug) => API.get(`posts/${slug}/`);
-
-// Note: When sending FormData (for banner_image), Axios automatically sets the correct multipart headers
 export const createAdminPost = (data) => API.post("posts/", data);
 export const updateAdminPost = (slug, data) => API.patch(`posts/${slug}/`, data);
 export const deleteAdminPost = (slug) => API.delete(`posts/${slug}/`);
@@ -103,7 +101,6 @@ export const getAdminPostAccess = (params) => API.get("posts/access/", { params 
 // Payments
 export const getAdminPayments = (params) => API.get("payments/", { params });
 export const getPaymentsAnalytics = (params) => API.get("payments/analytics/", { params });
-
 export const exportPaymentsCSV = async (params) => {
     const response = await API.get("payments/export_csv/", { params, responseType: 'blob' });
     return response.data;
@@ -115,6 +112,14 @@ export const approveFeedback = (id) => API.post(`feedbacks/${id}/approve/`);
 export const updateFeedbackStatus = (id, isApproved) => API.patch(`feedbacks/${id}/`, { is_approved: isApproved });
 export const deleteFeedback = (id) => API.delete(`feedbacks/${id}/`);
 export const getFeedbackAnalytics = () => API.get("feedbacks/analytics/");
+
+
+// Comments
+export const getAdminComments = (params) => API.get("comments/", { params });
+export const getAdminCommentById = (id) => API.get(`comments/${id}/`);
+export const updateAdminComment = (id, data) => API.patch(`comments/${id}/`, data);
+export const deleteAdminComment = (id) => API.delete(`comments/${id}/`);
+export const approveAdminComment = (id) => API.post(`comments/${id}/approve/`);
 
 // System
 export const getAdminAuditLogs = (params) => API.get("audit-logs/", { params });

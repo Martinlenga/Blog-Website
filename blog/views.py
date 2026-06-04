@@ -19,11 +19,14 @@ import requests
 from google.auth.transport import requests as google_requests
 from requests.exceptions import HTTPError
 
-from .models import Post, PaymentTransaction, PostAccess, Feedback
-from .serializers import PostListSerializer, PostDetailSerializer, FeedbackSerializer
+from .models import Post, PaymentTransaction, PostAccess, Feedback, PostComment
+from .serializers import PostListSerializer, PostDetailSerializer, FeedbackSerializer, PostCommentSerializer
 from .utils import initiate_stk_push, normalize_phone
 
+from rest_framework.views import APIView
+
 logger = logging.getLogger(__name__)
+from rest_framework import permissions 
 
 # --------------------------
 # Google Login
@@ -280,4 +283,35 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# --------------------------
+# Post Comment
+# --------------------------
+class PostCommentAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly] 
+
+    def get(self, request, slug):
+        post = get_object_or_404(Post, slug=slug)
+        comments = PostComment.objects.filter(post=post, is_approved=True)
+        serializer = PostCommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, slug):
+        post = get_object_or_404(Post, slug=slug)
+        content = request.data.get('content')
+
+        if not content:
+            return Response({"error": "Comment content is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 🚀 Because of IsAuthenticatedOrReadOnly, we are 100% guaranteed 
+        # that request.user exists here. We no longer need request.data.get('name').
+        comment = PostComment.objects.create(
+            post=post,
+            content=content,
+            user=request.user 
+        )
+        
+        serializer = PostCommentSerializer(comment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

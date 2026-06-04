@@ -4,24 +4,23 @@ import { FiClock, FiArrowRight, FiCalendar } from "react-icons/fi";
 
 // 🚀 THE ULTIMATE BULLETPROOF IMAGE HANDLER
 const getImageUrl = (imagePath) => {
-  if (!imagePath) return placeholder;
-  if (String(imagePath).startsWith("http")) return imagePath;
+  if (!imagePath) return placeholder; // Make sure 'placeholder' is imported in your files
 
-  let apiBase = "http://localhost:8000"; // Absolute fallback
-  
-  try {
-    if (typeof process !== "undefined" && process.env.REACT_APP_API_URL) {
-      apiBase = process.env.REACT_APP_API_URL;
-    } else if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) {
-      apiBase = import.meta.env.VITE_API_URL;
-    }
-  } catch (err) {
-    // Silently ignore bundler environment errors
+  // 1. Get the base URL (Safely falling back to your ACTUAL production URL, not localhost)
+  const rawApiUrl = process.env.REACT_APP_API_URL || "https://api.ithaguru.co.ke/api";
+  const apiBase = rawApiUrl.replace(/\/api\/?$/, "");
+
+  // 2. 🚀 THE DATABASE FIX: Intercept and destroy accidental localhost links
+  let safePath = String(imagePath);
+  if (safePath.includes("localhost:8000")) {
+    safePath = safePath.replace("http://localhost:8000", "");
   }
 
-  // FORCE it to be a string. This guarantees .replace() will never, ever crash.
-  apiBase = String(apiBase).replace(/\/api\/?$/, "");
-  const cleanPath = String(imagePath).startsWith("/") ? imagePath : `/${imagePath}`;
+  // 3. If it's a valid, external HTTP link (like AWS S3, Unsplash, etc.), let it pass
+  if (safePath.startsWith("http")) return safePath;
+
+  // 4. Clean the path and combine it with the production API base
+  const cleanPath = safePath.startsWith("/") ? safePath : `/${safePath}`;
   
   return `${apiBase}${cleanPath}`;
 };

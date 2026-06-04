@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Post, Feedback
+from .models import Post, Feedback, PostComment
 
 # ---------------------------------------------------------
 # Post List Serializer (Strictly Teasers - NO CONTENT LEAK)
@@ -73,3 +73,26 @@ class FeedbackSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'email': {'write_only': True}
         }
+
+# ---------------------------------------------------------
+# PostComment Serializer
+# ---------------------------------------------------------
+class PostCommentSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    author_avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PostComment
+        fields = ['id', 'author_name', 'author_avatar', 'content', 'created_at']
+
+    def get_author_name(self, obj):
+        # 🚀 STRICT LOOKUP: Pull directly from the Google Auth User data.
+        # (We keep the obj.name fallback at the very end ONLY so your React frontend 
+        # doesn't crash if you have old, legacy anonymous comments already in the database)
+        if obj.user:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
+        return obj.name or "Anonymous"
+
+    def get_author_avatar(self, obj):
+        name = self.get_author_name(obj)
+        return f"https://ui-avatars.com/api/?name={name}&background=e0e7ff&color=4338ca"
