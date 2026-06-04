@@ -83,9 +83,12 @@ const Navbar = () => {
 
             {/* GOOGLE LOGIN */}
             {!isLoggedIn && (
-              // 🚀 UX FIX: Removed the massive fixed width so the button sizes itself naturally
               <div className="flex items-center">
-                <GoogleLoginButton onSuccess={closeAll} />
+                {/* 🚀 Explicitly tell it to use the small navbar styling */}
+                <GoogleLoginButton 
+                  variant="navbar" 
+                  onSuccess={closeAll} 
+                />
               </div>
             )}
 

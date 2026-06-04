@@ -4,7 +4,7 @@ import { getFeedbackAnalytics } from "../../services/adminApi";
 import { MessageSquare, Star, ThumbsUp, TrendingUp } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
-  BarChart, Bar, Cell, PieChart, Pie
+  BarChart, Bar, Cell, PieChart, Pie, LabelList
 } from "recharts";
 
 import StatCard from "../../components/StatCard";
@@ -108,13 +108,13 @@ export default function FeedbackAnalytics() {
       {/* CHARTS CONTAINER GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         
-        {/* AREA: RATING HISTORY (Using ChartCard) */}
+        {/* AREA: RATING HISTORY */}
         <div className="h-[350px] sm:h-[400px]">
           <ChartCard 
             title="Rating History" 
             subtitle="Average score trend lines over time"
           >
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={avg_ratings} margin={{ left: -30, right: 5, top: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
@@ -144,14 +144,15 @@ export default function FeedbackAnalytics() {
           </ChartCard>
         </div>
 
-        {/* BAR: STAR DISTRIBUTION (Using ChartCard) */}
+        {/* BAR: STAR DISTRIBUTION */}
         <div className="h-[350px] sm:h-[400px]">
           <ChartCard 
             title="Star Distribution" 
             subtitle="Volume metrics broken down by individual ratings"
           >
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={rating_distribution} layout="vertical" margin={{ left: 0, right: 15, top: 10, bottom: 0 }}>
+            
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rating_distribution} layout="vertical" margin={{ left: 0, right: 50, top: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
                 <XAxis type="number" hide />
                 <YAxis 
@@ -168,6 +169,19 @@ export default function FeedbackAnalytics() {
                   formatter={(val) => [val.toLocaleString(), "Reviews"]}
                 />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={24}>
+                  
+                
+                  <LabelList 
+                    dataKey="count" 
+                    position="right" 
+                    offset={8} // Pushes the text 8px away from the end of the bar
+                    fill="#6B7280" // A nice soft gray color
+                    fontSize={12}
+                    fontWeight={700}
+                    // Optional: Only show the number if it's greater than 0, and format with commas
+                    formatter={(val) => val > 0 ? val.toLocaleString() : ''} 
+                  />
+
                   {rating_distribution.map((entry, index) => {
                     const colorIndex = Math.min(Math.max(Number(entry.rating) - 1, 0), 4);
                     return <Cell key={`cell-${index}`} fill={barColors[colorIndex]} />;
@@ -183,7 +197,6 @@ export default function FeedbackAnalytics() {
   );
 }
 
-// 🚀 Replaced raw divs with your customized Skeleton primitives
 const AnalyticsSkeleton = () => (
   <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-12 px-4 sm:px-6 lg:px-8">
     <div className="border-b border-gray-100 pb-5 sm:pb-6 flex justify-between items-center">

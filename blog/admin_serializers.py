@@ -90,36 +90,41 @@ class AdminPasswordResetSerializer(serializers.Serializer):
 # -----------------------------
 class AdminPostSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(read_only=True, slug_field="username")
+    
+    author_name = serializers.SerializerMethodField() 
+    
     conversion_rate = serializers.SerializerMethodField()
     banner_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Post
-        fields = "__all__"
+        fields = "__all__" # Because this is __all__, custom_author and author_name will be included automatically!
         read_only_fields = ["author", "slug", "created_at", "updated_at", "views", "reading_time_minutes", "conversion_rate"]
 
     def update(self, instance, validated_data):
         if 'banner_image' in validated_data and not validated_data['banner_image']:
             validated_data.pop('banner_image')
-            
         return super().update(instance, validated_data)
+    
+    def get_author_name(self, obj):
+        # 1. If you typed a name in the override box, use it!
+        if getattr(obj, 'custom_author', None):
+            return obj.custom_author
+            
+        # 2. Otherwise, fall back to the Admin's real name or username
+        if obj.author:
+            return f"{obj.author.first_name} {obj.author.last_name}".strip() or obj.author.username
+            
+        return "Admin"
 
     def get_conversion_rate(self, obj):
-        """
-        PERFORMANCE OPTIMIZATION NOTE:
-        This runs a database count per article item. For heavy dashboard lists,
-        prefer to annotate the query count via the view using:
-        Post.objects.annotate(successful_purchases=Count('paymenttransaction', filter=Q(paymenttransaction__status='SUCCESS')))
-        """
+        # ... (keep your existing conversion rate logic exactly the same) ...
         if getattr(obj, 'views', 0) == 0:
             return "0.0%"
-            
-        # Try leveraging view annotations first to save database performance overhead
         if hasattr(obj, 'successful_purchases'):
             purchases = obj.successful_purchases
         else:
             purchases = PaymentTransaction.objects.filter(post=obj, status="SUCCESS").count()
-            
         rate = (purchases / obj.views) * 100
         return f"{rate:.1f}%"
 

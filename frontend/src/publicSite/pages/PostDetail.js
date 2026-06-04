@@ -4,11 +4,11 @@ import { Helmet } from "react-helmet";
 import { FiClock, FiUser, FiUnlock, FiLock, FiAlertCircle } from "react-icons/fi";
 import { FaTwitter, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
 
-import { getPostBySlug, pollPostUnlock, googleLogin } from "../services/api";
+import { getPostBySlug, pollPostUnlock } from "../services/api";
 import { useAuth } from "../../auth/PublicAuthContext";
 import MpesaModal from "../components/MpesaModal";
 import ArticleBody from "../components/ArticleBody"; 
-import { useGoogleLogin } from '@react-oauth/google';
+import GoogleLoginButton from "../../auth/GoogleLoginButton";
 
 // saved from the admin editor actually render correctly on the public UI.
 import 'react-quill-new/dist/quill.snow.css'; 
@@ -30,7 +30,7 @@ const formatDate = (dateString) => {
 
 const PostDetail = () => {
   const { slug } = useParams();
-  const { isLoggedIn, user, login } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,22 +63,7 @@ const PostDetail = () => {
     if (isLoggedIn) fetchPost();
   }, [isLoggedIn, fetchPost]);
 
-  const handleGoogleSignIn = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      try {
-        const res = await googleLogin(tokenResponse.access_token);
-        if (res?.access) {
-          login(res.access, res.user, res.refresh);
-        }
-      } catch (err) {
-        setError("Failed to authenticate with our servers.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: () => setError("Google authentication window closed or failed.")
-  });
+  
 
   const handleUnlock = async () => {
     try {
@@ -289,10 +274,12 @@ const PostDetail = () => {
                   Unlock this premium publication to get full access to the insights and community discussion.
                 </p>
                 
+                {/* Inside the Paywall Overlay */}
                 {!isLoggedIn ? (
-                   <button onClick={() => handleGoogleSignIn()} className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl hover:bg-indigo-600 transition-all shadow-lg hover:-translate-y-0.5 text-sm">
-                     Sign in to Unlock
-                   </button>
+                   <GoogleLoginButton 
+                     variant="unlock" 
+                     onError={(msg) => setError(msg)} 
+                   />
                 ) : (
                    <button onClick={() => setShowMpesa(true)} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-600/30 hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm">
                      Unlock for KES {post.price}

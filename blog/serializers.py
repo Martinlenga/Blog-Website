@@ -5,7 +5,8 @@ from .models import Post, Feedback, PostComment
 # Post List Serializer (Strictly Teasers - NO CONTENT LEAK)
 # ---------------------------------------------------------
 class PostListSerializer(serializers.ModelSerializer):
-    author_name = serializers.CharField(source="author.username", read_only=True)
+    author_name = serializers.SerializerMethodField()
+    
     published_at = serializers.DateTimeField(source="created_at", format="%b %d, %Y")
     price = serializers.SerializerMethodField()
     reading_time = serializers.SerializerMethodField()
@@ -28,6 +29,15 @@ class PostListSerializer(serializers.ModelSerializer):
             "views",
         ]
 
+    def get_author_name(self, obj):
+        if getattr(obj, 'custom_author', None):
+            return obj.custom_author
+            
+        if obj.author:
+            return f"{obj.author.first_name} {obj.author.last_name}".strip() or obj.author.username
+            
+        return "JK Team"
+
     def get_content_preview(self, obj):
         return obj.excerpt
 
@@ -37,7 +47,6 @@ class PostListSerializer(serializers.ModelSerializer):
     def get_reading_time(self, obj):
         minutes = obj.reading_time_minutes or 1
         return f"{minutes} min read"
-
 
 # ---------------------------------------------------------
 # Post Detail Serializer (Includes Gated Content)

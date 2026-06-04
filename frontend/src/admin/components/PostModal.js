@@ -10,7 +10,8 @@ import 'react-quill-new/dist/quill.snow.css';
 export default function PostModal({ open, post, onClose, refresh }) {
   const [formData, setFormData] = useState({
     title: "", excerpt: "", content: "", category: "General", 
-    price: "150.00", featured: false, is_published: true, meta_description: ""
+    price: "150.00", featured: false, is_published: true, meta_description: "",
+    custom_author: "" // 🚀 ADDED INITIAL STATE
   });
 
   const [banner, setBanner] = useState(null);
@@ -29,7 +30,8 @@ export default function PostModal({ open, post, onClose, refresh }) {
         price: post.price ? Number(post.price).toFixed(2) : "150.00",
         featured: post.featured || false,
         is_published: post.is_published !== undefined ? post.is_published : true,
-        meta_description: post.meta_description || ""
+        meta_description: post.meta_description || "",
+        custom_author: post.custom_author || "" // 🚀 POPULATE IF EDITING
       });
       
       const img = post.banner_image 
@@ -41,7 +43,8 @@ export default function PostModal({ open, post, onClose, refresh }) {
     } else if (open) {
       setFormData({ 
         title: "", excerpt: "", content: "", category: "General", 
-        price: "150.00", featured: false, is_published: true, meta_description: "" 
+        price: "150.00", featured: false, is_published: true, meta_description: "",
+        custom_author: "" // 🚀 RESET ON NEW
       });
       setPreview(placeholder);
       setBanner(null);
@@ -52,16 +55,16 @@ export default function PostModal({ open, post, onClose, refresh }) {
   // 🚀 RE-ENGINEERED QUILL: Strips messy formatting on paste and removes unnecessary heading options
   const quillModules = useMemo(() => ({
     toolbar: [
-      [{ 'header': [2, 3, 4, false] }], // H1 removed. The article title is the H1.
+      [{ 'header': [2, 3, 4, false] }], 
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
       [{ 'color': [] }, { 'background': [] }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
       [{ 'align': [] }],
       ['link', 'image', 'video', 'code-block'],
-      ['clean'] // 🚀 CRITICAL: The "Remove Formatting" button
+      ['clean'] 
     ],
     clipboard: {
-      matchVisual: false, // 🚀 Prevents Quill from adding massive extra spacing when pasting from Word/Notion
+      matchVisual: false, 
     }
   }), []);
 
@@ -106,6 +109,7 @@ export default function PostModal({ open, post, onClose, refresh }) {
 
     const payload = new FormData();
     
+    // 🚀 ALREADY PERFECT: This loop naturally catches custom_author and appends it!
     Object.keys(formData).forEach((key) => {
       const value = formData[key];
       payload.append(key, typeof value === "boolean" ? (value ? "true" : "false") : value);
@@ -157,7 +161,6 @@ export default function PostModal({ open, post, onClose, refresh }) {
         aria-labelledby="modal-title"
       >
         <style>{`
-          /* 🚀 ADMIN WYSIWYG FIX: Force the editor to behave EXACTLY like the public UI */
           .quill-editor .ql-toolbar.ql-snow { 
             position: sticky; top: 0; z-index: 50; 
             background: white; border: none; 
@@ -309,6 +312,15 @@ export default function PostModal({ open, post, onClose, refresh }) {
                   {/* Settings Card */}
                   <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-5">
                     
+                    {/* 🚀 GUEST AUTHOR INPUT ADDED HERE */}
+                    <div>
+                      <label htmlFor="custom_author" className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Guest Author (Optional)</label>
+                      <input
+                        id="custom_author" type="text" name="custom_author" value={formData.custom_author} onChange={handleChange} placeholder="Leave blank to post as Admin"
+                        className="w-full px-3 py-2 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all font-medium"
+                      />
+                    </div>
+
                     <div>
                       <label htmlFor="category" className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Category</label>
                       <input

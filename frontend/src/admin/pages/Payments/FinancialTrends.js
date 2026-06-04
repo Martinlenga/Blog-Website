@@ -5,8 +5,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, Car
 import { TrendingUp, DollarSign, CreditCard, Users } from "lucide-react";
 
 import StatCard from "../../components/StatCard";
-import ChartCard from "../../components/ChartCard"; // 🚀 Added reusable wrapper
-import { Skeleton } from "../../components/Skeleton"; // 🚀 Added reusable skeleton
+import ChartCard from "../../components/ChartCard"; 
+import { Skeleton } from "../../components/Skeleton"; 
 
 export default function FinancialTrends() {
   const [analytics, setAnalytics] = useState(null);

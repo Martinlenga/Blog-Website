@@ -21,9 +21,12 @@ const StatCard = ({ label, value, trend, icon: Icon, color = "indigo" }) => {
           <h2 className="text-gray-500 text-[11px] font-bold uppercase tracking-wider mb-1.5 leading-tight">
             {label}
           </h2>
-          <div className="font-sans text-2xl font-bold text-gray-900 truncate tracking-tight">
+          
+          {/* 🚀 THE FIX: Removed 'truncate', added 'break-words', and made the font responsive (text-xl on mobile, 2xl on desktop) */}
+          <div className="font-sans text-xl sm:text-2xl font-bold text-gray-900 break-words tracking-tight">
             {value}
           </div>
+
         </div>
         
         {Icon && (
@@ -45,14 +48,12 @@ const StatCard = ({ label, value, trend, icon: Icon, color = "indigo" }) => {
               : "bg-gray-50 text-gray-600 border-gray-200"
             }`}
           >
-            {/* 🚀 BUG FIX: Dynamically swap the icon based on the trend direction */}
             {isPositive && <TrendingUp size={12} className="mr-1" aria-hidden="true" />}
             {isNegative && <TrendingDown size={12} className="mr-1" aria-hidden="true" />}
             {isNeutral && <Minus size={12} className="mr-1" aria-hidden="true" />}
             
             <span>{Math.abs(trend)}%</span>
             
-            {/* A11y context for screen readers */}
             <span className="sr-only">
               {isPositive ? 'increase' : isNegative ? 'decrease' : 'no change'}
             </span>

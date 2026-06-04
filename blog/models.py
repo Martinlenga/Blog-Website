@@ -24,6 +24,14 @@ class Post(models.Model):
     excerpt = models.TextField(max_length=500)
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+    
+    custom_author = models.CharField(
+        max_length=150, 
+        blank=True, 
+        null=True, 
+        help_text="Optional: Use this to override the default admin author name for guest writers"
+    )
+    
     banner_image = models.ImageField(upload_to="banners/", blank=True, null=True)
     category = models.CharField(max_length=50, default="General")
     featured = models.BooleanField(default=False)
@@ -62,8 +70,7 @@ class Post(models.Model):
             self.reading_time_minutes = math.ceil(word_count / 200) or 1
 
         # 4. Cloud-Safe Image Optimization (Pre-Save)
-        # Intercepts the file stream in memory before passing it to the storage backend
-        if self.banner_image and not self.pk: # Optimizes primarily on initial upload
+        if self.banner_image and not self.pk:
             try:
                 img = Image.open(self.banner_image)
                 if img.mode in ("RGBA", "P"):
@@ -73,12 +80,10 @@ class Post(models.Model):
                     output_size = (1920, 1080)
                     img.thumbnail(output_size)
                     
-                    # Save the optimized image to a memory buffer
                     output = BytesIO()
                     img.save(output, format='JPEG', quality=85, optimize=True)
                     output.seek(0)
                     
-                    # Replace the original uploaded file with the optimized memory buffer
                     filename = f"{self.banner_image.name.split('.')[0]}.jpg"
                     self.banner_image = InMemoryUploadedFile(
                         output, 'ImageField', filename,
@@ -87,7 +92,7 @@ class Post(models.Model):
             except Exception as e:
                 print(f"Image optimization failed: {e}")
 
-        # Always call super().save() LAST after mutating fields in memory
+        # Always call super().save() LAST
         super().save(*args, **kwargs)
 
     def __str__(self):
