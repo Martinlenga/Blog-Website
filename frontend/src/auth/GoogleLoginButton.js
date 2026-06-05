@@ -2,15 +2,34 @@ import { useState, useRef, useEffect } from "react";
 import { useGoogleLogin } from '@react-oauth/google';
 import { googleLogin } from "../publicSite/services/api"; 
 import { useAuth } from "./PublicAuthContext";
-import { FiLoader } from "react-icons/fi";
+import { FiLoader, FiExternalLink } from "react-icons/fi"; // 🚀 Added FiExternalLink
 import { FcGoogle } from "react-icons/fc"; 
+
+// 🚀 HELPER: Detects if the user is trapped inside Facebook, Instagram, TikTok, etc.
+const isInAppBrowser = () => {
+  if (typeof window === "undefined" || !window.navigator) return false;
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  return (
+    ua.indexOf("FBAV") > -1 || 
+    ua.indexOf("FBIOS") > -1 || 
+    ua.indexOf("Instagram") > -1 ||
+    ua.indexOf("Snapchat") > -1 ||
+    ua.indexOf("LinkedInApp") > -1 ||
+    ua.indexOf("BytedanceWebview") > -1
+  );
+};
 
 const GoogleLoginButton = ({ onSuccess, onError, variant = "navbar" }) => {
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [inAppTrapped, setInAppTrapped] = useState(false); // 🚀 STATE: Tracks if they are trapped
   const timeoutRef = useRef(null);
 
   useEffect(() => {
+    // 🚀 Check for the in-app browser the moment the button loads
+    if (isInAppBrowser()) {
+      setInAppTrapped(true);
+    }
     return () => clearTimeout(timeoutRef.current);
   }, []);
 
@@ -50,6 +69,38 @@ const GoogleLoginButton = ({ onSuccess, onError, variant = "navbar" }) => {
     handleGoogleSignIn();
   };
 
+  // ==========================================
+  // 🚀 THE ESCAPE HATCH UI (Shows ONLY if inside Facebook/Insta)
+  // ==========================================
+  if (inAppTrapped) {
+    if (variant === "unlock") {
+      return (
+        <div className="w-full p-4 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl shadow-inner text-sm text-center">
+          <p className="font-bold mb-1 flex items-center justify-center gap-2">
+            <FiExternalLink /> Google Login Blocked
+          </p>
+          <p className="text-amber-700 text-xs leading-relaxed">
+            Social media browsers block secure logins. Tap the <strong>three dots (•••)</strong> at the top right and select <strong>"Open in system browser"</strong> to unlock.
+          </p>
+        </div>
+      );
+    }
+    
+    // Navbar trapped variant
+    return (
+      <button 
+        onClick={() => alert('Please tap the three dots (•••) at the top right and select "Open in system browser" to sign in securely.')}
+        className="inline-flex items-center gap-2 py-1.5 px-3 bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+      >
+        <FiExternalLink /> Open in Browser
+      </button>
+    );
+  }
+
+  // ==========================================
+  // NORMAL BUTTONS (Shows in Chrome, Safari, Firefox)
+  // ==========================================
+  
   // 🚀 VARIANT 1: The Massive 'Unlock' Button for PostDetail
   if (variant === "unlock") {
     return (
