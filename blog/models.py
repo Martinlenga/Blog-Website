@@ -24,6 +24,18 @@ class Post(models.Model):
     excerpt = models.TextField(max_length=500)
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+
+    series_name = models.CharField(
+        max_length=150, 
+        blank=True, 
+        null=True, 
+        help_text="If this is part of a multi-part story, type the series name here (e.g., 'The Genesis Protocol')"
+    )
+    part_number = models.PositiveIntegerField(
+        blank=True, 
+        null=True, 
+        help_text="The sequence number for this specific post (e.g., 1, 2, 3)"
+    )
     
     custom_author = models.CharField(
         max_length=150, 

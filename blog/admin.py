@@ -25,14 +25,12 @@ class AdminProfileAdmin(admin.ModelAdmin):
 # =========================
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "featured", "is_published", "price", "views", "reading_time_minutes", "created_at")
+    list_display = ("title", "author", "series_name", "part_number", "featured", "is_published", "price", "views", "reading_time_minutes", "created_at")
     prepopulated_fields = {"slug": ("title",)}
-    list_filter = ("featured", "is_published", "category", "created_at")
-    search_fields = ("title", "excerpt", "content", "author__username")
+    list_filter = ("series_name", "featured", "is_published", "category", "created_at")
+    search_fields = ("title", "series_name", "excerpt", "content", "author__username")
     ordering = ("-created_at",)
     readonly_fields = ("views", "reading_time_minutes", "created_at", "updated_at")
-    
-    # Prevents N+1 database queries when displaying the author column
     list_select_related = ("author",)
 
 

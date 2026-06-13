@@ -6,7 +6,6 @@ from .models import Post, Feedback, PostComment
 # ---------------------------------------------------------
 class PostListSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
-    
     published_at = serializers.DateTimeField(source="created_at", format="%b %d, %Y")
     price = serializers.SerializerMethodField()
     reading_time = serializers.SerializerMethodField()
@@ -27,6 +26,8 @@ class PostListSerializer(serializers.ModelSerializer):
             "price",
             "reading_time",
             "views",
+            "series_name", 
+            "part_number",
         ]
 
     def get_author_name(self, obj):

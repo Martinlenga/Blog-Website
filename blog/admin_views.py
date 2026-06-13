@@ -195,8 +195,8 @@ class AdminPostViewSet(ModelViewSet):
     lookup_field = "slug"
 
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    filterset_fields = ["category", "featured", "is_published"]
-    search_fields = ["title", "category", "content", "meta_description", "author__username"]
+    filterset_fields = ["category", "featured", "is_published", "series_name"] 
+    search_fields = ["title", "category", "content", "meta_description", "author__username", "series_name"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -445,8 +445,18 @@ class AdminDashboardViewSet(ViewSet):
 
         post = Post.objects.filter(featured=True).first()
         featured_post = {
-            "id": post.id, "title": post.title, "price": post.price, "category": post.category,
-            "created_at": post.created_at, "author": post.author.username,
+            "id": post.id, 
+            "title": post.title, 
+            "price": post.price, 
+            "category": post.category,
+            "created_at": post.created_at, 
+            "author": post.author.username,
+            
+            # 🚀 THE FIX: Explicitly pass the new fields to the React dashboard!
+            "custom_author": post.custom_author,
+            "series_name": post.series_name,
+            "part_number": post.part_number,
+            
             "banner_image": request.build_absolute_uri(post.banner_image.url) if post.banner_image else None
         } if post else None
 

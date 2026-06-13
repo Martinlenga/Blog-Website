@@ -90,17 +90,15 @@ class AdminPasswordResetSerializer(serializers.Serializer):
 # -----------------------------
 class AdminPostSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(read_only=True, slug_field="username")
-    
     author_name = serializers.SerializerMethodField() 
-    
     conversion_rate = serializers.SerializerMethodField()
     banner_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Post
-        fields = "__all__" # Because this is __all__, custom_author and author_name will be included automatically!
+        fields = "__all__" # 🚀 Because this is __all__, series_name and part_number are already included!
         read_only_fields = ["author", "slug", "created_at", "updated_at", "views", "reading_time_minutes", "conversion_rate"]
-
+        
     def update(self, instance, validated_data):
         if 'banner_image' in validated_data and not validated_data['banner_image']:
             validated_data.pop('banner_image')

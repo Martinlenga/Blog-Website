@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import placeholder from "../../assets/article-placeholder.jpg";
 import { FiClock, FiUser, FiCalendar } from "react-icons/fi";
+import { Layers } from "lucide-react"; 
 
-// 🚀 BULLETPROOF IMAGE URL HANDLER
 const getImageUrl = (imagePath) => {
   if (!imagePath) return placeholder;
 
@@ -26,7 +26,6 @@ const LatestPreview = ({ posts }) => {
   return (
     <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       
-      {/* 🔹 HEADER */}
       <div className="flex items-end justify-between mb-8 border-b border-gray-100 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -41,7 +40,6 @@ const LatestPreview = ({ posts }) => {
         </div>
       </div>
 
-      {/* THE GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
         {posts.map((post) => {
           
@@ -57,11 +55,9 @@ const LatestPreview = ({ posts }) => {
             <Link 
               to={`/post/${post.slug}`} 
               key={post.id} 
-              // 🚀 FIX: Made mobile slightly taller (h-[400px]) to comfortably fit the always-visible text, while desktop stays sleek
-              className="group relative block h-[400px] lg:h-[360px] w-full rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+              className="group relative block h-[420px] lg:h-[380px] w-full rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
             >
               
-              {/* 1. BACKGROUND IMAGE */}
               <div className="absolute inset-0 bg-gray-900">
                 <img
                   src={imageUrl}
@@ -70,11 +66,8 @@ const LatestPreview = ({ posts }) => {
                 />
               </div>
 
-              {/* 2. THE CURTAIN (Dark Gradient) 
-                  🚀 FIX: Made the default gradient slightly darker on mobile so the text is perfectly readable without hovering */}
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 lg:via-gray-900/40 to-transparent opacity-90 lg:opacity-80 lg:group-hover:via-gray-900/80 transition-all duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 lg:via-gray-900/60 to-transparent opacity-90 lg:opacity-80 lg:group-hover:via-gray-900/90 transition-all duration-500" />
 
-              {/* 3. TOP TAGS (Category & Price) */}
               <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
                 <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded shadow-sm">
                   {categoryName}
@@ -87,36 +80,38 @@ const LatestPreview = ({ posts }) => {
                 )}
               </div>
 
-              {/* 4. CONTENT CONTAINER */}
               <div className="absolute inset-x-0 bottom-0 p-6 z-30">
 
-                {/* 🚀 FIX: translate-y-0 on mobile, hiding via translate-y-6 only on large screens (lg) */}
                 <div className="transform transition-all duration-500 translate-y-0 lg:translate-y-6 lg:group-hover:translate-y-0">
 
-                  {/* TITLE + BADGE */}
                   <div className="mb-3">
-                    <div className="inline-flex items-center gap-1.5 bg-black/60 text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest mb-3">
-                      <FiClock className="text-indigo-400" />
-                      {post.reading_time || "5 Min"}
-                    </div>
+                    
+                    {/* 🚀 THE FIX: A sleek, editorial typography overline for the series */}
+                    {post.series_name && (
+                      <div className="flex items-center gap-1.5 text-indigo-400 text-[9px] font-black uppercase tracking-widest mb-2 drop-shadow-sm">
+                        <Layers size={10} />
+                        {post.series_name} {post.part_number && `• PT ${post.part_number}`}
+                      </div>
+                    )}
 
-                    <h3 className="font-serif text-2xl font-bold text-white leading-snug line-clamp-2">
+                    <h3 className="font-serif text-2xl font-bold text-white leading-snug drop-shadow-md">
                       {post.title}
                     </h3>
+
+                    {/* Moved reading time below the title for cleaner flow */}
+                    <div className="flex items-center gap-1.5 text-gray-300 text-[10px] font-bold uppercase tracking-widest mt-3">
+                      <FiClock className="text-indigo-400" />
+                      {post.reading_time || "5 Min Read"}
+                    </div>
                   </div>
 
-                  {/* HIDDEN CONTENT */}
                   <div
                     className="
-                      /* 🚀 FIX: On mobile, fully visible by default */
                       max-h-[180px] opacity-100 mt-3
-                      /* 🚀 FIX: On desktop (lg), hide it and wait for hover */
                       lg:mt-0 lg:max-h-0 lg:opacity-0 lg:group-hover:max-h-[180px] lg:group-hover:opacity-100
-                      
                       overflow-hidden transition-all duration-500 ease-in-out flex flex-col gap-3
                     "
                   >
-
                     <div className="w-10 h-1 bg-indigo-500 rounded-full hidden lg:block"></div>
 
                     <p className="text-gray-300 text-sm line-clamp-2">
@@ -124,7 +119,6 @@ const LatestPreview = ({ posts }) => {
                     </p>
 
                     <div className="flex items-center justify-between pt-3 border-t border-white/10">
-
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1 text-gray-300 text-[10px] font-bold uppercase">
                           <FiUser className="text-indigo-400" />
@@ -140,11 +134,9 @@ const LatestPreview = ({ posts }) => {
                       <span className="text-white text-[10px] font-extrabold uppercase bg-indigo-600 px-3 py-1.5 rounded hover:bg-indigo-500 transition-colors">
                         Read →
                       </span>
-
                     </div>
 
                   </div>
-
                 </div>
               </div>
             </Link>

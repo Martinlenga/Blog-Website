@@ -11,7 +11,8 @@ import TableToolbar from "../../components/TableToolbar";
 import EmptyState from "../../components/EmptyState";
 import { TableSkeleton } from "../../components/Skeleton";
 
-import { Trash2, Edit, Star, Eye, Plus, ChevronDown, FileText } from "lucide-react";
+// 🚀 ADDED 'Layers' icon here for the Series badge
+import { Trash2, Edit, Star, Eye, Plus, ChevronDown, FileText, Layers } from "lucide-react";
 import placeholder from "../../../assets/article-placeholder.jpg";
 
 export default function AllPosts() {
@@ -24,6 +25,10 @@ export default function AllPosts() {
   const [status, setStatus] = useState(""); 
   const [dateRange, setDateRange] = useState("");
   const [categories, setCategories] = useState([]);
+
+  // 🚀 ADDED: Series Filter State
+  const [seriesFilter, setSeriesFilter] = useState("");
+  const [seriesList, setSeriesList] = useState([]);
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -44,6 +49,8 @@ export default function AllPosts() {
         category,
         is_published: status,
         date_range: dateRange,
+        // 🚀 ADDED: Send the selected series to the backend
+        series_name: seriesFilter, 
       };
 
       const res = await getAdminPosts(params);
@@ -63,12 +70,24 @@ export default function AllPosts() {
       ];
 
       setCategories(uniqueCats);
+
+      // 🚀 ADDED: Extract unique Series names for the dropdown
+      const uniqueSeries = [
+        ...new Set(
+          (res.data.results || [])
+            .map((p) => p.series_name)
+            .filter(Boolean)
+        ),
+      ];
+      setSeriesList(uniqueSeries);
+
     } catch (err) {
       console.error("Failed to fetch posts:", err);
     } finally {
       setLoading(false);
     }
-  }, [page, search, category, status, dateRange]);
+  // 🚀 ADDED seriesFilter to dependencies below
+  }, [page, search, category, status, dateRange, seriesFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -144,21 +163,37 @@ export default function AllPosts() {
           dateRange={dateRange}
           setDateRange={(val) => handleFilterChange(setDateRange, val)}
         >
-          {/* Status Filter: Compact and beautifully styled for mobile */}
-          <div className="relative mt-3 sm:mt-0 shrink-0 self-start sm:self-auto">
-             <select
-                id="postStatus"
-                name="postStatus"
-                value={status}
-                onChange={(e) => handleFilterChange(setStatus, e.target.value)}
-                className="appearance-none w-[130px] sm:w-[150px] pl-3 pr-8 py-1.5 sm:py-2 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all hover:bg-gray-100 shadow-sm"
+          <div className="flex items-center gap-3 mt-3 sm:mt-0 w-full sm:w-auto self-start sm:self-auto">
+            
+            {/* 🚀 REMOVED the hiding condition so it is always visible */}
+            <div className="relative shrink-0 w-1/2 sm:w-auto">
+              <select
+                value={seriesFilter}
+                onChange={(e) => handleFilterChange(setSeriesFilter, e.target.value)}
+                className="appearance-none w-full sm:w-[150px] pl-3 pr-8 py-1.5 sm:py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all hover:bg-indigo-50 shadow-sm"
               >
-                <option value="">All Statuses</option>
-                <option value="true">Published</option>
-                <option value="false">Drafts</option>
+                <option value="">All Series</option>
+                {seriesList.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-           </div>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative shrink-0 w-1/2 sm:w-auto">
+               <select
+                 id="postStatus"
+                 name="postStatus"
+                 value={status}
+                 onChange={(e) => handleFilterChange(setStatus, e.target.value)}
+                 className="appearance-none w-full sm:w-[150px] pl-3 pr-8 py-1.5 sm:py-2 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all hover:bg-gray-100 shadow-sm"
+               >
+                 <option value="">All Statuses</option>
+                 <option value="true">Published</option>
+                 <option value="false">Drafts</option>
+               </select>
+               <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+             </div>
+          </div>
         </TableToolbar>
 
         {/* DATA TABLE */}
@@ -189,7 +224,7 @@ export default function AllPosts() {
                   <td colSpan="5">
                     <EmptyState 
                       title="No articles found" 
-                      description={search || category || status || dateRange ? "Try clearing your filters or adjusting your search term." : "You haven't published any articles yet."}
+                      description={search || category || status || dateRange || seriesFilter ? "Try clearing your filters or adjusting your search term." : "You haven't published any articles yet."}
                       icon={<FileText size={32} className="text-gray-400" />}
                     />
                   </td>
@@ -217,8 +252,18 @@ export default function AllPosts() {
                         <h3 className="font-serif text-sm sm:text-base font-bold text-gray-900 leading-snug mb-1.5 group-hover:text-indigo-600 transition-colors line-clamp-2">
                           {post.title}
                         </h3>
+
+                        {/* 🚀 ADDED: Display Series info under the title */}
+                        {post.series_name && (
+                          <div className="flex items-center gap-1 text-[10px] text-indigo-500 font-bold uppercase tracking-wider mb-1.5 bg-indigo-50/50 w-fit px-1.5 py-0.5 rounded">
+                            <Layers size={10} /> {post.series_name} • Part {post.part_number}
+                          </div>
+                        )}
+
                         <div className="flex items-center gap-2 text-[11px] text-gray-400 font-medium">
-                          <span className="truncate max-w-[120px]">{post.author || "Admin"}</span>
+                          <span className="truncate max-w-[120px]">
+                            {post.custom_author || post.author_name || post.author || "Admin"}
+                          </span>
                           <span>•</span>
                           <span>{new Date(post.created_at).toLocaleDateString()}</span>
                         </div>

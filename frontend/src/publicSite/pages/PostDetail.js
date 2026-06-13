@@ -3,17 +3,18 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { FiClock, FiUser, FiUnlock, FiLock, FiAlertCircle } from "react-icons/fi";
 import { FaTwitter, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
+import { Layers } from "lucide-react"; // 🚀 Added Layers icon for the Series Badge
 
-import { getPostBySlug, pollPostUnlock } from "../services/api";
+import { getPostBySlug, pollPostUnlock, getPosts } from "../services/api";
 import { useAuth } from "../../auth/PublicAuthContext";
 import MpesaModal from "../components/MpesaModal";
 import ArticleBody from "../components/ArticleBody"; 
 import GoogleLoginButton from "../../auth/GoogleLoginButton";
 
-// saved from the admin editor actually render correctly on the public UI.
 import 'react-quill-new/dist/quill.snow.css'; 
 
 import PostComments from "../components/PostComments"; 
+import RelatedStories from "../components/RelatedStories";
 
 const formatDate = (dateString) => {
   if (!dateString) return "Recently Published";
@@ -32,7 +33,12 @@ const PostDetail = () => {
   const { slug } = useParams();
   const { isLoggedIn, user } = useAuth();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [slug]);
+
   const [post, setPost] = useState(null);
+  const [allOtherPosts, setAllOtherPosts] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showMpesa, setShowMpesa] = useState(false);
@@ -43,8 +49,43 @@ const PostDetail = () => {
     setLoading(true);
     setError("");
     try {
-      const data = await getPostBySlug(slug);
-      setPost(data);
+      const [postData, allPostsData] = await Promise.all([
+        getPostBySlug(slug),
+        getPosts()
+      ]);
+      
+      setPost(postData);
+
+      let extractedPosts = [];
+
+      if (allPostsData && Array.isArray(allPostsData.posts)) {
+        extractedPosts = [...allPostsData.posts];
+        if (allPostsData.featured) {
+          extractedPosts.unshift(allPostsData.featured); 
+        }
+      } else if (Array.isArray(allPostsData)) {
+        extractedPosts = allPostsData;
+      } else if (allPostsData?.results) {
+        extractedPosts = allPostsData.results;
+      } else if (allPostsData?.data) {
+        extractedPosts = allPostsData.data;
+      }
+
+      const filteredPosts = extractedPosts.filter((p) => p.slug !== slug);
+      
+      let finalCarouselPosts = [];
+
+      if (postData.series_name) {
+        const sameSeriesPosts = filteredPosts.filter(p => p.series_name === postData.series_name);
+        sameSeriesPosts.sort((a, b) => (a.part_number || 0) - (b.part_number || 0));
+        const otherPosts = filteredPosts.filter(p => p.series_name !== postData.series_name);
+        finalCarouselPosts = [...sameSeriesPosts, ...otherPosts];
+      } else {
+        finalCarouselPosts = filteredPosts;
+      }
+
+      setAllOtherPosts(finalCarouselPosts);
+
     } catch {
       setError("Failed to load article.");
     } finally {
@@ -62,8 +103,6 @@ const PostDetail = () => {
   useEffect(() => {
     if (isLoggedIn) fetchPost();
   }, [isLoggedIn, fetchPost]);
-
-  
 
   const handleUnlock = async () => {
     try {
@@ -135,7 +174,6 @@ const PostDetail = () => {
   }
 
   return (
-    // 🚀 Added overflow-x-hidden here safely, to prevent the entire body from horizontal scrolling
     <main className="bg-white min-h-screen pt-28 pb-32 overflow-x-hidden w-full">
       <Helmet>
         <title>{post.title} | JK Ithaguru</title>
@@ -144,12 +182,24 @@ const PostDetail = () => {
 
       <article className="max-w-3xl mx-auto px-6 md:px-8 relative z-10 animate-in fade-in duration-700">
         
-        {/* Category & Date */}
-        <div className="flex items-center gap-3 mb-6">
-          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-widest rounded-full">
+        {/* 🚀 THE FIX: Category, Date, AND Series Badge Row */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full border border-indigo-100 shrink-0">
             {post.category || "Editorial"}
           </span>
-          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+          
+          {/* Render the Series Badge if it exists */}
+          {post.series_name && (
+            <>
+              <span className="text-gray-300 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full shadow-sm shrink-0">
+                <Layers size={12} />
+                {post.series_name} {post.part_number && `• PART ${post.part_number}`}
+              </span>
+            </>
+          )}
+
+          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider ml-auto sm:ml-0">
             {formatDate(post.published_at || post.created_at)}
           </span>
         </div>
@@ -180,13 +230,9 @@ const PostDetail = () => {
               <span className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 text-[10px] font-extrabold uppercase tracking-widest rounded-lg border border-emerald-100 shadow-sm">
                 <FiUnlock size={14} /> Unlocked
               </span>
-            ) : post.price > 0 ? (
+            ) : (
               <span className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-lg shadow-md">
                 <FiLock size={14} /> Premium • KES {post.price}
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 text-[10px] font-extrabold uppercase tracking-widest rounded-lg border border-emerald-100 shadow-sm">
-                Free Read
               </span>
             )}
           </div>
@@ -196,23 +242,18 @@ const PostDetail = () => {
         <div className="relative">
           
           <style>{`
-            /* 1. THE ULTIMATE RESET */
             .article-clean-reset {
-              padding: 0 2px; /* Micro buffer so letters never touch absolute zero */
+              padding: 0 2px;
               font-family: inherit;
               font-size: inherit;
             }
-
-            /* 2. PROTECT WORDS FROM BEING SLICED & KILL SCROLLBARS */
             .article-clean-reset * {
               word-break: normal !important; 
               overflow-wrap: break-word !important; 
               hyphens: none !important;
               -webkit-hyphens: none !important;
-              max-width: 100% !important; /* Forces massive images/strings to obey mobile width */
+              max-width: 100% !important;
             }
-
-            /* 3. DESTROY COPY-PASTED GAPS & JUSTIFY RIVERS */
             .article-clean-reset p, 
             .article-clean-reset span, 
             .article-clean-reset div, 
@@ -221,10 +262,8 @@ const PostDetail = () => {
             .article-clean-reset h2, 
             .article-clean-reset h3 {
               text-align: left !important; 
-              white-space: pre-wrap !important; /* Preserves natural flow and stops inline width lockups */
+              white-space: pre-wrap !important;
             }
-
-            /* 4. SAFE MEDIA & TABLES */
             .article-clean-reset img, 
             .article-clean-reset iframe,
             .article-clean-reset video {
@@ -233,12 +272,9 @@ const PostDetail = () => {
             .article-clean-reset table, 
             .article-clean-reset pre, 
             .article-clean-reset code {
-              overflow-x: auto !important; /* Allows tables/code to safely scroll internally */
+              overflow-x: auto !important;
               white-space: pre-wrap !important;
             }
-
-            /* 5. RESTORE INTENTIONAL QUILL ALIGNMENTS */
-            /* Because we imported Quill CSS above, these standard classes will now override our left-align reset */
             .article-clean-reset .ql-align-center, 
             .article-clean-reset .ql-align-center * {
               text-align: center !important;
@@ -254,11 +290,9 @@ const PostDetail = () => {
           `}</style>
 
           <div 
-            // We apply both our 'article-clean-reset' AND Quill's native 'ql-editor' wrapper class here
             className={`article-clean-reset ql-editor transition-opacity duration-500 w-full ${!isUnlocked ? "opacity-95" : "opacity-100"}`}
             style={!isUnlocked ? { maskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)' } : {}}
           >
-            {/* The ArticleBody now purely handles Tailwind Typography coloring/fonts without fighting layout */}
             <ArticleBody content={isUnlocked ? post.content : post.content_preview} />
           </div>
 
@@ -274,7 +308,6 @@ const PostDetail = () => {
                   Unlock this premium publication to get full access to the insights and community discussion.
                 </p>
                 
-                {/* Inside the Paywall Overlay */}
                 {!isLoggedIn ? (
                    <GoogleLoginButton 
                      variant="unlock" 
@@ -306,7 +339,7 @@ const PostDetail = () => {
                </div>
             </div>
 
-            {/* 🚀 CLEAN, NATIVE COMMENTS SECTION */}
+            <RelatedStories posts={allOtherPosts} />
             <PostComments postSlug={post.slug} />
             
           </div>
@@ -330,7 +363,6 @@ const PostDetail = () => {
             
             <span className="shrink-0 tracking-wide">Reading as</span>
             
-            {/* 🚀 FIX: Removed truncate and max-width! Added break-all so a massive email just wraps safely instead of hiding behind dots. */}
             <span className="text-indigo-600 font-bold break-all">
               {user.email}
             </span>

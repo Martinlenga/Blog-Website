@@ -4,7 +4,7 @@ import { getDashboardStats } from "../../services/adminApi";
 import { useAdmin } from "../../context/AdminContext";
 import { 
   DollarSign, Users, Eye, ArrowUpRight, Calendar, Star, 
-  Tag, Clock, User
+  Tag, Clock, User, Layers
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Bar, ComposedChart, Line, Legend
@@ -64,7 +64,7 @@ export default function Overview() {
     if (val >= 1000) return `Kshs ${(val / 1000).toFixed(0)}k`;
     return `Kshs ${val}`;
   };
-
+  
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12 font-sans">
       <Helmet>
@@ -102,8 +102,11 @@ export default function Overview() {
             title="Revenue Performance" 
             subtitle="Income trends over the last 12 months"
           >
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={revenue_trend || []} margin={{ left: -15, right: 5, top: 10, bottom: 0 }}>
+            {/* 🚀 FIX 1: Changed height from 350 to "100%" */}
+            <ResponsiveContainer width="100%" height="100%">
+              
+              {/* 🚀 FIX 2: Increased 'bottom' margin to 25 so X-axis labels fit, and changed 'left' from -15 to 0 so big numbers don't clip */}
+              <AreaChart data={revenue_trend || []} margin={{ left: 0, right: 5, top: 10, bottom: 25 }}>
                 <defs>
                   <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.15}/>
@@ -161,6 +164,7 @@ export default function Overview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         
         {/* FEATURED POST COMPONENT CARD */}
+        {/* FEATURED POST COMPONENT CARD */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-xl transition-all duration-300 group/card">
           <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/80 flex justify-between items-center shrink-0">
             <h3 className="font-serif text-base sm:text-lg font-bold text-gray-900">Featured Article</h3>
@@ -189,10 +193,21 @@ export default function Overview() {
 
               {/* Content Section - BOTTOM HALF */}
               <div className="p-5 sm:p-6 flex flex-col flex-1 bg-white relative z-20">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center flex-wrap gap-x-3 gap-y-2 mb-3">
                   <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
                     <Clock size={12} /> {new Date(featured_post.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
+                  
+                  {/* 🚀 THE SERIES BADGE */}
+                  {featured_post.series_name && (
+                    <>
+                      <span className="text-gray-300 hidden sm:inline">•</span>
+                      <span className="flex items-center gap-1 text-indigo-600 text-[9px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded shadow-sm">
+                        <Layers size={10} />
+                        {featured_post.series_name} {featured_post.part_number && `• PT ${featured_post.part_number}`}
+                      </span>
+                    </>
+                  )}
                 </div>
                 
                 <h3 className="font-serif text-xl sm:text-2xl leading-snug font-bold text-gray-900 group-hover/card:text-indigo-600 transition-colors line-clamp-2 mb-4">
@@ -206,7 +221,10 @@ export default function Overview() {
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Author</span>
-                      <span className="text-sm font-semibold text-gray-900 truncate capitalize">{featured_post.author || "Admin"}</span>
+                      {/* 🚀 THE CUSTOM AUTHOR */}
+                      <span className="text-sm font-semibold text-gray-900 truncate capitalize">
+                        {featured_post.custom_author || featured_post.author || "Admin"}
+                      </span>
                     </div>
                   </div>
 
