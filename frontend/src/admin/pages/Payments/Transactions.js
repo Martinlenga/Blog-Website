@@ -233,7 +233,7 @@ export default function Transactions() {
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-right align-top">
                       <div className={`text-xs sm:text-sm font-extrabold font-serif tracking-tight mt-1 ${p.status === 'SUCCESS' ? 'text-emerald-700' : 'text-gray-400'}`}>
-                        Kshs {Number(p.amount || 0).toLocaleString()}
+                        {Number(p.amount || 0) === 0 ? "Free" : `Kshs ${Number(p.amount).toLocaleString()}`}
                       </div>
                     </td>
                   </tr>

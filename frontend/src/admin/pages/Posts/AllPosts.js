@@ -273,9 +273,13 @@ export default function AllPosts() {
                           <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded">
                             <Eye size={12} className="text-gray-400" /> {(post.views || 0).toLocaleString()}
                           </span>
-                          {Number(post.price) > 0 && (
+                          {Number(post.price) > 0 ? (
                             <span className="text-xs font-bold text-emerald-600">
-                              Kshs {Number(post.price).toFixed(0)}
+                              Kshs {Number(post.price).toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                              Free
                             </span>
                           )}
                         </div>

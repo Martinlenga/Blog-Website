@@ -116,7 +116,7 @@ const PostDetail = () => {
     }
   };
 
-  const isUnlocked = post && (!post.locked || post.paid) && isLoggedIn;
+  const isUnlocked = post && !post.locked && isLoggedIn;
   const postUrl = `https://ithaguru.co.ke/posts/${slug}`;
 
   if (loading && !post) return (
@@ -232,7 +232,8 @@ const PostDetail = () => {
               </span>
             ) : (
               <span className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-lg shadow-md">
-                <FiLock size={14} /> Premium • KES {post.price}
+                {/* 🚀 FIX: Show a clear message if the post is free but locked behind authentication */}
+                <FiLock size={14} /> {Number(post.price) === 0 ? "Free (Login to Read)" : `Premium • KES ${post.price}`}
               </span>
             )}
           </div>
@@ -242,6 +243,10 @@ const PostDetail = () => {
         <div className="relative">
           
           <style>{`
+            .article-clean-reset p {
+              margin-bottom: 0.8em !important;
+              line-height: 1.75 !important;
+            }
             .article-clean-reset {
               padding: 0 2px;
               font-family: inherit;

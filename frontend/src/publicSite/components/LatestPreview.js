@@ -73,9 +73,14 @@ const LatestPreview = ({ posts }) => {
                   {categoryName}
                 </span>
                 
-                {!isFree && (
+                {/* 🚀 FIX: Show green Free badge if free, otherwise show KES price */}
+                {!isFree ? (
                   <span className="bg-white text-gray-900 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded shadow-lg">
                     KES {priceValue.toLocaleString()}
+                  </span>
+                ) : (
+                  <span className="bg-emerald-500 text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded shadow-lg">
+                    Free
                   </span>
                 )}
               </div>

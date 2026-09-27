@@ -132,7 +132,13 @@ def post_detail_by_slug(request, slug):
     if is_authenticated and user.is_staff:
         has_access = True
 
+    # 🚀 FIX: If price is 0, grant access BUT only if the user is authenticated
+    if is_authenticated and (post.price == 0 or post.price == 0.00):
+        has_access = True
+
     locked = not has_access
+
+    data["locked"] = locked
 
     data["locked"] = locked
     data["pending_payment"] = pending_payment

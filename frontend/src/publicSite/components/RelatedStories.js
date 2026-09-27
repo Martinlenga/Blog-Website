@@ -34,6 +34,10 @@ const RelatedStories = ({ posts }) => {
             ? (typeof related.category === 'object' ? related.category.name : related.category) 
             : "Editorial";
 
+          // 🚀 FIX: Calculate if the related story is free
+          const priceValue = parseFloat(related.price || 0);
+          const isFree = isNaN(priceValue) || priceValue <= 0;
+
           return (
             <Link 
               to={`/post/${related.slug}`} 
@@ -56,11 +60,18 @@ const RelatedStories = ({ posts }) => {
                 </span>
               </div>
 
-              {/* Top Right Premium Badge */}
+              {/* Top Right Price Badge */}
               <div className="absolute top-3 right-3 z-10">
-                <span className="bg-amber-500 text-black text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm flex items-center gap-1">
-                  <FiLock size={10} /> Premium
-                </span>
+                {/* 🚀 FIX: Conditionally show Free or Premium */}
+                {!isFree ? (
+                  <span className="bg-amber-500 text-black text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm flex items-center gap-1">
+                    <FiLock size={10} /> Premium
+                  </span>
+                ) : (
+                  <span className="bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm">
+                    Free
+                  </span>
+                )}
               </div>
 
               {/* Content Bottom Left */}

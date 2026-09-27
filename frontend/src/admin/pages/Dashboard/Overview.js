@@ -231,7 +231,8 @@ export default function Overview() {
                   <div className="text-right shrink-0 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100/50">
                     <span className="block text-[9px] text-emerald-600/70 font-bold uppercase tracking-wider mb-0.5">Price</span>
                     <span className="text-lg font-extrabold text-emerald-700 font-serif leading-none">
-                      Kshs {Number(featured_post.price || 0).toLocaleString()}
+                      {/* 🚀 FIX: Show 'Free' if the featured admin post is 0.00 */}
+                      {Number(featured_post.price || 0) === 0 ? "Free" : `Kshs ${Number(featured_post.price).toLocaleString()}`}
                     </span>
                   </div>
                 </div>
