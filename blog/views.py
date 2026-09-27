@@ -27,6 +27,7 @@ from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 from rest_framework import permissions 
+from django.views.decorators.cache import never_cache
 
 # --------------------------
 # Google Login
@@ -93,10 +94,10 @@ def post_list(request):
         "posts": PostListSerializer(posts, many=True).data,
     })
 
-
 # --------------------------
 # Post Detail (Paywall Logic)
 # --------------------------
+@never_cache
 @api_view(["GET"])
 @permission_classes([]) 
 @authentication_classes([JWTAuthentication])
@@ -104,9 +105,6 @@ def post_detail_by_slug(request, slug):
     post = get_object_or_404(Post, slug=slug, is_published=True)
 
     # ⭐ VIEW TRACKING:
-    # Note: If your frontend does not send 'credentials: include' to pass session cookies 
-    # alongside the JWT, request.session will reset every time. If view counts inflate artificially, 
-    # switch this to track by request.META.get('REMOTE_ADDR') (User's IP) instead of session.
     session_key = f"viewed_post_{post.id}"
     if not request.session.get(session_key, False):
         Post.objects.filter(pk=post.pk).update(views=F("views") + 1)
@@ -132,13 +130,11 @@ def post_detail_by_slug(request, slug):
     if is_authenticated and user.is_staff:
         has_access = True
 
-    # 🚀 FIX: If price is 0, grant access BUT only if the user is authenticated
-    if is_authenticated and (post.price == 0 or post.price == 0.00):
+    # 🚀 FIX: Bulletproof check for free posts
+    if is_authenticated and post.price <= 0:
         has_access = True
 
     locked = not has_access
-
-    data["locked"] = locked
 
     data["locked"] = locked
     data["pending_payment"] = pending_payment
