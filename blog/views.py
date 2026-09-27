@@ -134,6 +134,8 @@ def post_detail_by_slug(request, slug):
     if is_authenticated and post.price <= 0:
         has_access = True
 
+        PostAccess.objects.get_or_create(post=post, user=user)
+
     locked = not has_access
 
     data["locked"] = locked
