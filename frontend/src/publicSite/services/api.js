@@ -92,7 +92,7 @@ export const googleLogin = async (token) => {
 /* ===================== ARTICLES ===================== */
 export const getPosts = async () => fetchPublic(`${API_BASE}/posts/`);
 
-export const getPostBySlug = async (slug) => fetchWithAuth(`${API_BASE}/posts/${slug}/`);
+export const getPostBySlug = async (slug) => fetchWithAuth(`${API_BASE}/posts/${slug}/?t=${new Date().getTime()}`);
 
 /* ===================== PAYMENTS ===================== */
 export const initiatePayment = async (slug, phone) => {
